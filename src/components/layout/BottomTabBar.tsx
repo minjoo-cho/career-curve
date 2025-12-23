@@ -1,7 +1,7 @@
-import { MessageSquare, LayoutGrid, User, Settings } from 'lucide-react';
+import { MessageSquare, LayoutGrid, Briefcase, Target, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type TabId = 'chat' | 'board' | 'profile' | 'settings';
+export type TabId = 'chat' | 'board' | 'career' | 'goals' | 'settings';
 
 interface TabItem {
   id: TabId;
@@ -11,8 +11,9 @@ interface TabItem {
 
 const tabs: TabItem[] = [
   { id: 'chat', label: '채팅', icon: MessageSquare },
-  { id: 'board', label: '이직 보드', icon: LayoutGrid },
-  { id: 'profile', label: '프로필', icon: User },
+  { id: 'board', label: '보드', icon: LayoutGrid },
+  { id: 'career', label: '경력', icon: Briefcase },
+  { id: 'goals', label: '목표', icon: Target },
   { id: 'settings', label: '설정', icon: Settings },
 ];
 
