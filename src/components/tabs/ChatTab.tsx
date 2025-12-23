@@ -1,17 +1,36 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, ExternalLink } from 'lucide-react';
+import { Send, Loader2, ExternalLink, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useJobStore } from '@/stores/jobStore';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface ChatTabProps {
   onNavigateToBoard: () => void;
 }
 
+const JOB_URL_KEYWORDS = ['career', 'careers', 'job', 'jobs', 'recruit', 'recruiting', 'hire', 'hiring', 'position', 'vacancy', 'opening', 'apply', 'talent', 'greenhouse', 'lever', 'workable', 'ashbyhq'];
+
+function isLikelyJobUrl(url: string): boolean {
+  const lowerUrl = url.toLowerCase();
+  return JOB_URL_KEYWORDS.some(keyword => lowerUrl.includes(keyword));
+}
+
 export function ChatTab({ onNavigateToBoard }: ChatTabProps) {
   const [inputValue, setInputValue] = useState('');
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [pendingUrl, setPendingUrl] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { messages, addMessage, updateMessage, addJobPosting } = useJobStore();
@@ -50,6 +69,69 @@ export function ChatTab({ onNavigateToBoard }: ChatTabProps) {
     return data.data;
   };
 
+  const processJobUrl = async (url: string) => {
+    // Add processing message
+    const processingId = (Date.now() + 1).toString();
+    addMessage({
+      id: processingId,
+      type: 'assistant',
+      content: '공고를 정리하고 있어요…',
+      isProcessing: true,
+      createdAt: new Date(),
+    });
+
+    try {
+      // Call the edge function to analyze the job posting
+      const jobData = await analyzeJobUrl(url);
+      
+      // Calculate priority based on company and fit scores (1 is best)
+      const avgScore = ((jobData.companyScore || 3) + (jobData.fitScore || 3)) / 2;
+      const priority = Math.max(1, Math.min(5, Math.round(6 - avgScore)));
+      
+      // Create job posting from analyzed data
+      const newJobId = (Date.now() + 2).toString();
+      addJobPosting({
+        id: newJobId,
+        companyName: jobData.companyName || '회사명 확인 필요',
+        title: jobData.title || '채용 공고',
+        status: 'reviewing',
+        priority,
+        position: jobData.position || '미정',
+        minExperience: jobData.minExperience,
+        workType: jobData.workType,
+        location: jobData.location,
+        visaSponsorship: jobData.visaSponsorship,
+        summary: jobData.summary || '공고 내용을 확인해주세요.',
+        companyScore: jobData.companyScore || 3,
+        fitScore: jobData.fitScore || 3,
+        keyCompetencies: jobData.keyCompetencies || [],
+        sourceUrl: url,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      // Update processing message
+      updateMessage(processingId, {
+        content: `✅ 보드에 추가됨\n\n${jobData.companyName} - ${jobData.title}`,
+        isProcessing: false,
+        jobPostingId: newJobId,
+      });
+
+      toast.success('공고가 분석되어 보드에 추가되었습니다');
+
+    } catch (error) {
+      console.error('Error analyzing job:', error);
+      
+      // Update to error message
+      updateMessage(processingId, {
+        content: '❌ 공고 분석에 실패했습니다. 링크를 확인하거나 공고 내용을 직접 붙여넣어 주세요.',
+        isProcessing: false,
+      });
+
+      toast.error(error instanceof Error ? error.message : '공고 분석 실패');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim()) return;
@@ -67,73 +149,45 @@ export function ChatTab({ onNavigateToBoard }: ChatTabProps) {
     setInputValue('');
 
     if (isLink) {
-      // Add processing message
-      const processingId = (Date.now() + 1).toString();
-      addMessage({
-        id: processingId,
-        type: 'assistant',
-        content: '공고를 정리하고 있어요…',
-        isProcessing: true,
-        createdAt: new Date(),
-      });
-
-      try {
-        // Call the edge function to analyze the job posting
-        const jobData = await analyzeJobUrl(urlToAnalyze);
-        
-        // Create job posting from analyzed data
-        const newJobId = (Date.now() + 2).toString();
-        addJobPosting({
-          id: newJobId,
-          companyName: jobData.companyName || '회사명 확인 필요',
-          title: jobData.title || '채용 공고',
-          status: 'reviewing',
-          priority: 4,
-          quickInterest: 'medium',
-          position: jobData.position || '미정',
-          minExperience: jobData.minExperience,
-          workType: jobData.workType,
-          location: jobData.location,
-          visaSponsorship: jobData.visaSponsorship,
-          summary: jobData.summary || '공고 내용을 확인해주세요.',
-          companyScore: jobData.companyScore || 3,
-          fitScore: jobData.fitScore || 3,
-          sourceUrl: urlToAnalyze,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-
-        // Update processing message
-        updateMessage(processingId, {
-          content: `✅ 이직 보드에 추가됨\n\n${jobData.companyName} - ${jobData.title}`,
-          isProcessing: false,
-          jobPostingId: newJobId,
-        });
-
-        toast.success('공고가 분석되어 보드에 추가되었습니다');
-
-      } catch (error) {
-        console.error('Error analyzing job:', error);
-        
-        // Update to error message
-        updateMessage(processingId, {
-          content: '❌ 공고 분석에 실패했습니다. 링크를 확인하거나 공고 내용을 직접 붙여넣어 주세요.',
-          isProcessing: false,
-        });
-
-        toast.error(error instanceof Error ? error.message : '공고 분석 실패');
+      // Check if it looks like a job URL
+      if (!isLikelyJobUrl(urlToAnalyze)) {
+        // Show confirmation dialog
+        setPendingUrl(urlToAnalyze);
+        setConfirmDialogOpen(true);
+        return;
       }
+
+      await processJobUrl(urlToAnalyze);
     } else {
       // Regular text message
       setTimeout(() => {
         addMessage({
           id: (Date.now() + 1).toString(),
           type: 'assistant',
-          content: '공고 링크를 붙여넣으시면 자동으로 분석해서 이직 보드에 정리해드릴게요.',
+          content: '공고 링크를 붙여넣으시면 자동으로 분석해서 보드에 정리해드릴게요.',
           createdAt: new Date(),
         });
       }, 500);
     }
+  };
+
+  const handleConfirmJobUrl = async () => {
+    setConfirmDialogOpen(false);
+    if (pendingUrl) {
+      await processJobUrl(pendingUrl);
+      setPendingUrl(null);
+    }
+  };
+
+  const handleCancelJobUrl = () => {
+    setConfirmDialogOpen(false);
+    addMessage({
+      id: Date.now().toString(),
+      type: 'assistant',
+      content: '취소되었습니다. 채용 공고 링크를 붙여넣어 주세요.',
+      createdAt: new Date(),
+    });
+    setPendingUrl(null);
   };
 
   return (
@@ -210,6 +264,25 @@ export function ChatTab({ onNavigateToBoard }: ChatTabProps) {
           </Button>
         </div>
       </form>
+
+      {/* Non-job URL Confirmation Dialog */}
+      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-warning" />
+              공고가 아닌 링크일 수 있습니다
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              이 링크는 채용 공고가 아닌 것으로 보입니다. 계속 공고 등록을 진행하시겠습니까?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelJobUrl}>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmJobUrl}>계속 진행</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

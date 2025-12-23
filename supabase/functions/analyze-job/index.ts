@@ -73,7 +73,7 @@ serve(async (req) => {
     // Step 2: Use AI to analyze and extract job posting information
     const systemPrompt = `You are a job posting analyzer. Extract structured information from job postings.
     
-Return a JSON object with these fields:
+Extract and return:
 - companyName: string (company name)
 - title: string (job title)
 - position: string (position category like "프론트엔드", "백엔드", "프로덕트 디자인", "PM" etc)
@@ -82,7 +82,7 @@ Return a JSON object with these fields:
 - location: string (work location)
 - visaSponsorship: boolean (if visa sponsorship mentioned)
 - summary: string (3-4 sentence summary of the role in Korean)
-- requirements: array of strings (top 5 key requirements)
+- keyCompetencies: array of 5 objects with {title, description} - THE MOST IMPORTANT: Extract exactly 5 key competencies/skills that a recruiter would prioritize when evaluating candidates. Think from the hiring manager's perspective: what are the must-have experiences and abilities?
 - companyScore: number 1-5 (estimated company attractiveness based on benefits, culture mentions)
 - fitScore: number 1-5 (general fit score based on role clarity)
 

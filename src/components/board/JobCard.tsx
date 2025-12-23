@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { JobPosting, JobStatus, STATUS_LABELS, STATUS_COLORS, INTEREST_LABELS, QuickInterest } from '@/types/job';
+import { JobPosting, JobStatus, STATUS_LABELS, STATUS_COLORS, PRIORITY_LABELS } from '@/types/job';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Star, MoreVertical, Trash2, Edit2, X, Check } from 'lucide-react';
+import { Star, MoreVertical, Trash2, Edit2 } from 'lucide-react';
 import { useJobStore } from '@/stores/jobStore';
 import {
   DropdownMenu,
@@ -58,6 +58,17 @@ export function JobCard({ job, onClick }: JobCardProps) {
     removeJobPosting(job.id);
   };
 
+  const getPriorityColor = (priority: number) => {
+    switch (priority) {
+      case 1: return 'text-primary bg-primary/10';
+      case 2: return 'text-success bg-success/10';
+      case 3: return 'text-warning bg-warning/10';
+      case 4: return 'text-muted-foreground bg-muted';
+      case 5: return 'text-muted-foreground bg-muted';
+      default: return 'text-muted-foreground bg-muted';
+    }
+  };
+
   return (
     <>
       <div
@@ -75,9 +86,9 @@ export function JobCard({ job, onClick }: JobCardProps) {
             </h3>
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-lg shrink-0">
-              {INTEREST_LABELS[job.quickInterest]}
-            </span>
+            <Badge className={cn('text-xs font-semibold', getPriorityColor(job.priority))}>
+              #{job.priority}
+            </Badge>
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                 <Button
@@ -114,9 +125,6 @@ export function JobCard({ job, onClick }: JobCardProps) {
         {/* Footer */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-primary">
-              #{job.priority}
-            </span>
             {job.fitScore && renderStars(job.fitScore)}
           </div>
           <Badge className={cn('text-xs', STATUS_COLORS[job.status])}>
@@ -148,7 +156,6 @@ function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
     title: job.title,
     position: job.position,
     status: job.status,
-    quickInterest: job.quickInterest,
     priority: job.priority,
     minExperience: job.minExperience || '',
     workType: job.workType || '',
@@ -214,18 +221,18 @@ function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>관심도</Label>
+              <Label>우선순위</Label>
               <Select
-                value={formData.quickInterest}
-                onValueChange={(v) => setFormData({ ...formData, quickInterest: v as QuickInterest })}
+                value={formData.priority.toString()}
+                onValueChange={(v) => setFormData({ ...formData, priority: parseInt(v) })}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="high">👍 높음</SelectItem>
-                  <SelectItem value="medium">😐 보통</SelectItem>
-                  <SelectItem value="low">👎 낮음</SelectItem>
+                  {[1, 2, 3, 4, 5].map((p) => (
+                    <SelectItem key={p} value={p.toString()}>#{p} {PRIORITY_LABELS[p]}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

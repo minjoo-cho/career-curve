@@ -8,8 +8,13 @@ export type JobStatus =
   | 'offer'          // 오퍼
   | 'accepted';      // 합격-최종
 
-// Quick interest indicator
-export type QuickInterest = 'high' | 'medium' | 'low';
+// AI-extracted key competency for job posting
+export interface KeyCompetency {
+  title: string;
+  description: string;
+  score?: number; // User's self-assessment 1-5
+  rationale?: string;
+}
 
 // Job posting data structure
 export interface JobPosting {
@@ -17,16 +22,16 @@ export interface JobPosting {
   companyName: string;
   title: string;
   status: JobStatus;
-  priority: number;
-  quickInterest: QuickInterest;
+  priority: number; // 1-5 (1 is best)
   position: string;
   minExperience?: string;
   workType?: string;
   location?: string;
   visaSponsorship?: boolean;
   summary?: string;
-  companyScore?: number;
-  fitScore?: number;
+  companyScore?: number; // 1-5
+  fitScore?: number; // 1-5
+  keyCompetencies?: KeyCompetency[]; // AI-extracted from recruiter perspective
   sourceUrl?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -43,16 +48,33 @@ export interface Experience {
   createdAt: Date;
 }
 
+// Resume file data
+export interface Resume {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  uploadedAt: Date;
+  parseStatus: 'pending' | 'success' | 'fail';
+  parseError?: string;
+}
+
 // Goal settings
 export interface CareerGoal {
   id: string;
   type: 'immediate' | 'short-term' | 'long-term';
   reason: string;
   careerPath?: string;
+  searchPeriod?: string; // e.g., "3개월", "6개월"
   companyEvalCriteria: { name: string; weight: number }[];
-  fitEvalCriteria: { name: string; weight: number }[];
   createdAt: Date;
   updatedAt: Date;
+}
+
+// Goal history record
+export interface GoalHistory {
+  id: string;
+  goal: CareerGoal;
+  archivedAt: Date;
 }
 
 // Chat message
@@ -87,9 +109,11 @@ export const STATUS_COLORS: Record<JobStatus, string> = {
   'accepted': 'bg-success/10 text-success',
 };
 
-// Quick interest labels
-export const INTEREST_LABELS: Record<QuickInterest, string> = {
-  'high': '👍',
-  'medium': '😐',
-  'low': '👎',
+// Priority labels
+export const PRIORITY_LABELS: Record<number, string> = {
+  1: '최우선',
+  2: '높음',
+  3: '보통',
+  4: '낮음',
+  5: '관심',
 };

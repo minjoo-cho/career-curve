@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { JobPosting, ChatMessage, Experience, CareerGoal } from '@/types/job';
+import { JobPosting, ChatMessage, Experience, CareerGoal, GoalHistory, Resume } from '@/types/job';
 
 interface JobStore {
   // Job postings
@@ -19,9 +19,16 @@ interface JobStore {
   updateExperience: (id: string, updates: Partial<Experience>) => void;
   removeExperience: (id: string) => void;
 
+  // Resumes
+  resumes: Resume[];
+  addResume: (resume: Resume) => void;
+  removeResume: (id: string) => void;
+
   // Goals
   currentGoal: CareerGoal | null;
   setGoal: (goal: CareerGoal) => void;
+  goalHistory: GoalHistory[];
+  archiveGoal: (goal: CareerGoal) => void;
 
   // User info
   userName: string;
@@ -38,7 +45,6 @@ const sampleJobPostings: JobPosting[] = [
     title: 'Frontend Engineer',
     status: 'interview',
     priority: 1,
-    quickInterest: 'high',
     position: '프론트엔드',
     minExperience: '3년 이상',
     workType: '하이브리드',
@@ -47,6 +53,13 @@ const sampleJobPostings: JobPosting[] = [
     summary: '토스에서 사용자 경험을 혁신할 프론트엔드 엔지니어를 찾습니다.',
     companyScore: 4,
     fitScore: 5,
+    keyCompetencies: [
+      { title: 'React/TypeScript 전문성', description: '복잡한 UI 컴포넌트 설계 및 개발 경험' },
+      { title: '성능 최적화', description: '대규모 서비스 성능 튜닝 경험' },
+      { title: '디자인 시스템', description: '재사용 가능한 컴포넌트 라이브러리 구축' },
+      { title: '협업 능력', description: '디자이너, PM과의 효과적인 커뮤니케이션' },
+      { title: '테스트 코드', description: '단위 테스트 및 E2E 테스트 작성 경험' },
+    ],
     createdAt: new Date('2024-12-15'),
     updatedAt: new Date('2024-12-20'),
   },
@@ -56,7 +69,6 @@ const sampleJobPostings: JobPosting[] = [
     title: 'Product Designer',
     status: 'applied',
     priority: 2,
-    quickInterest: 'high',
     position: '프로덕트 디자인',
     minExperience: '5년 이상',
     workType: '재택',
@@ -65,6 +77,13 @@ const sampleJobPostings: JobPosting[] = [
     summary: '당근에서 지역 커뮤니티를 위한 제품을 디자인합니다.',
     companyScore: 5,
     fitScore: 4,
+    keyCompetencies: [
+      { title: 'UX 리서치', description: '사용자 인사이트 도출 및 적용' },
+      { title: '프로토타이핑', description: 'Figma 기반 인터랙티브 프로토타입' },
+      { title: '데이터 기반 디자인', description: 'A/B 테스트 및 분석' },
+      { title: '디자인 시스템', description: '일관된 브랜드 경험 구축' },
+      { title: '모바일 UX', description: '네이티브 앱 디자인 경험' },
+    ],
     createdAt: new Date('2024-12-18'),
     updatedAt: new Date('2024-12-19'),
   },
@@ -74,7 +93,6 @@ const sampleJobPostings: JobPosting[] = [
     title: 'iOS Developer',
     status: 'reviewing',
     priority: 3,
-    quickInterest: 'medium',
     position: 'iOS',
     minExperience: '3년 이상',
     workType: '출근',
@@ -82,6 +100,13 @@ const sampleJobPostings: JobPosting[] = [
     summary: '카카오톡 iOS 앱 개발에 참여합니다.',
     companyScore: 4,
     fitScore: 3,
+    keyCompetencies: [
+      { title: 'Swift/SwiftUI', description: '최신 iOS 개발 스택 활용' },
+      { title: '앱 아키텍처', description: 'MVVM, Clean Architecture 경험' },
+      { title: '대규모 앱 경험', description: '수백만 사용자 앱 운영' },
+      { title: '성능 최적화', description: '메모리, 배터리 효율 최적화' },
+      { title: 'CI/CD', description: 'Fastlane 등 자동화 경험' },
+    ],
     createdAt: new Date('2024-12-20'),
     updatedAt: new Date('2024-12-20'),
   },
@@ -167,12 +192,22 @@ export const useJobStore = create<JobStore>((set) => ({
       experiences: state.experiences.filter((e) => e.id !== id),
     })),
 
+  // Resumes
+  resumes: [],
+  addResume: (resume) =>
+    set((state) => ({ resumes: [...state.resumes, resume] })),
+  removeResume: (id) =>
+    set((state) => ({
+      resumes: state.resumes.filter((r) => r.id !== id),
+    })),
+
   // Goals
   currentGoal: {
     id: '1',
     type: 'immediate',
     reason: '성장 기회와 더 나은 보상을 위해',
     careerPath: '시니어 엔지니어 → 테크 리드',
+    searchPeriod: '3개월',
     companyEvalCriteria: [
       { name: '성장 가능성', weight: 5 },
       { name: '기술 스택', weight: 4 },
@@ -180,17 +215,15 @@ export const useJobStore = create<JobStore>((set) => ({
       { name: '워라밸', weight: 3 },
       { name: '회사 문화', weight: 4 },
     ],
-    fitEvalCriteria: [
-      { name: '경력 적합도', weight: 5 },
-      { name: '기술 매칭', weight: 5 },
-      { name: '성장 기회', weight: 4 },
-      { name: '역할 범위', weight: 3 },
-      { name: '팀 규모', weight: 2 },
-    ],
     createdAt: new Date('2024-12-01'),
     updatedAt: new Date('2024-12-01'),
   },
   setGoal: (goal) => set({ currentGoal: goal }),
+  goalHistory: [],
+  archiveGoal: (goal) =>
+    set((state) => ({
+      goalHistory: [...state.goalHistory, { id: Date.now().toString(), goal, archivedAt: new Date() }],
+    })),
 
   // User info
   userName: '사용자',

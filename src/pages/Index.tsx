@@ -3,7 +3,8 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { BottomTabBar, TabId } from '@/components/layout/BottomTabBar';
 import { ChatTab } from '@/components/tabs/ChatTab';
 import { BoardTab } from '@/components/tabs/BoardTab';
-import { ProfileTab } from '@/components/tabs/ProfileTab';
+import { CareerTab } from '@/components/tabs/CareerTab';
+import { GoalsTab } from '@/components/tabs/GoalsTab';
 import { SettingsTab } from '@/components/tabs/SettingsTab';
 
 const Index = () => {
@@ -15,8 +16,10 @@ const Index = () => {
         return <ChatTab onNavigateToBoard={() => setActiveTab('board')} />;
       case 'board':
         return <BoardTab />;
-      case 'profile':
-        return <ProfileTab />;
+      case 'career':
+        return <CareerTab />;
+      case 'goals':
+        return <GoalsTab />;
       case 'settings':
         return <SettingsTab />;
       default:
