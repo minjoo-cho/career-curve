@@ -162,6 +162,38 @@ export const useJobStore = create<JobStore>()(
         userName: state.userName,
         goalStartDate: state.goalStartDate,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // Rehydrate dates from strings
+          state.goalStartDate = state.goalStartDate ? new Date(state.goalStartDate) : null;
+          state.jobPostings = state.jobPostings.map((p) => ({
+            ...p,
+            createdAt: new Date(p.createdAt),
+            updatedAt: new Date(p.updatedAt),
+          }));
+          state.experiences = state.experiences.map((e) => ({
+            ...e,
+            createdAt: new Date(e.createdAt),
+          }));
+          state.resumes = state.resumes.map((r) => ({
+            ...r,
+            uploadedAt: new Date(r.uploadedAt),
+          }));
+          if (state.currentGoal) {
+            state.currentGoal.createdAt = new Date(state.currentGoal.createdAt);
+            state.currentGoal.updatedAt = new Date(state.currentGoal.updatedAt);
+          }
+          state.goalHistory = state.goalHistory.map((h) => ({
+            ...h,
+            archivedAt: new Date(h.archivedAt),
+            goal: {
+              ...h.goal,
+              createdAt: new Date(h.goal.createdAt),
+              updatedAt: new Date(h.goal.updatedAt),
+            },
+          }));
+        }
+      },
     }
   )
 );
