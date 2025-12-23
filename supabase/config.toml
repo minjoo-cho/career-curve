@@ -2,3 +2,9 @@ project_id = "cdkbutdilfltelxgqryb"
 
 [functions.analyze-job]
 verify_jwt = false
+
+[functions.parse-resume]
+verify_jwt = false
+
+[functions.evaluate-fit]
+verify_jwt = false

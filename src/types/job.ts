@@ -14,6 +14,7 @@ export interface KeyCompetency {
   description: string;
   score?: number; // User's self-assessment 1-5
   rationale?: string;
+  evaluation?: string; // AI evaluation of user's fit
 }
 
 // Company criteria scores (per job)

@@ -37,8 +37,13 @@ import {
   FileText,
   Quote,
   AlertCircle,
+  Edit2,
+  Check,
+  X,
 } from 'lucide-react';
 import { ResumeBuilderDialog } from './ResumeBuilderDialog';
+import { FitEvaluationButton } from './FitEvaluationButton';
+import { Textarea } from '@/components/ui/textarea';
 
 interface JobDetailDialogProps {
   job: JobPosting;
@@ -51,6 +56,8 @@ export function JobDetailDialog({ job, open, onOpenChange }: JobDetailDialogProp
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [isResumeBuilderOpen, setIsResumeBuilderOpen] = useState(false);
+  const [editingEvaluation, setEditingEvaluation] = useState<number | null>(null);
+  const [editEvalText, setEditEvalText] = useState('');
   
   // Initialize company criteria scores from goal or job
   const [companyCriteriaScores, setCompanyCriteriaScores] = useState<CompanyCriteriaScore[]>(() => {
@@ -103,6 +110,25 @@ export function JobDetailDialog({ job, open, onOpenChange }: JobDetailDialogProp
     const avg = Math.round(updated.reduce((sum, c) => sum + (c.score || 0), 0) / updated.filter(c => c.score).length) || 0;
     updateJobPosting(job.id, { 
       keyCompetencies: updated, 
+      fitScore: avg 
+    });
+    updatePriority(companyAvg, avg);
+  };
+
+  const handleEvaluationUpdate = (index: number, evaluation: string) => {
+    const updated = [...keyCompetencyScores];
+    updated[index] = { ...updated[index], evaluation };
+    setKeyCompetencyScores(updated);
+    updateJobPosting(job.id, { keyCompetencies: updated });
+    setEditingEvaluation(null);
+    setEditEvalText('');
+  };
+
+  const handleAIEvaluated = (evaluatedCompetencies: KeyCompetency[]) => {
+    setKeyCompetencyScores(evaluatedCompetencies);
+    const avg = Math.round(evaluatedCompetencies.reduce((sum, c) => sum + (c.score || 0), 0) / evaluatedCompetencies.filter(c => c.score).length) || 0;
+    updateJobPosting(job.id, { 
+      keyCompetencies: evaluatedCompetencies, 
       fitScore: avg 
     });
     updatePriority(companyAvg, avg);
@@ -221,11 +247,21 @@ export function JobDetailDialog({ job, open, onOpenChange }: JobDetailDialogProp
                 </div>
               )}
 
-              {/* Key Competencies from AI - with scoring */}
+              {/* Key Competencies from AI - with scoring and AI evaluation */}
               {keyCompetencyScores.length > 0 && (
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground">핵심 역량 (채용담당자 관점)</h3>
-                  <p className="text-xs text-muted-foreground">AI가 추출한 5가지 핵심 역량입니다. 본인의 적합도를 평가해주세요.</p>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-foreground">핵심 역량 (채용담당자 관점)</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground">AI가 추출한 5가지 핵심 역량입니다. 아래 버튼으로 내 경험 기반 적합도를 자동 평가하거나, 직접 점수를 입력하세요.</p>
+                  
+                  {/* AI Evaluation Button */}
+                  <FitEvaluationButton
+                    keyCompetencies={keyCompetencyScores}
+                    experiences={experiences}
+                    onEvaluated={handleAIEvaluated}
+                  />
+
                   {keyCompetencyScores.map((comp, idx) => (
                     <div key={idx} className="bg-secondary/30 rounded-lg p-3 space-y-2">
                       <div className="flex items-start justify-between gap-2">
@@ -238,6 +274,55 @@ export function JobDetailDialog({ job, open, onOpenChange }: JobDetailDialogProp
                         <span className="text-xs text-muted-foreground">나의 역량:</span>
                         {renderStarRating(comp.score || 0, (v) => handleKeyCompetencyScoreChange(idx, v), 'sm')}
                       </div>
+                      {/* AI Evaluation */}
+                      {comp.evaluation && editingEvaluation !== idx && (
+                        <div className="bg-background/50 rounded p-2 mt-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-xs text-muted-foreground italic flex-1">{comp.evaluation}</p>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="w-6 h-6 shrink-0"
+                              onClick={() => {
+                                setEditingEvaluation(idx);
+                                setEditEvalText(comp.evaluation || '');
+                              }}
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      {editingEvaluation === idx && (
+                        <div className="mt-2 space-y-2">
+                          <Textarea
+                            value={editEvalText}
+                            onChange={(e) => setEditEvalText(e.target.value)}
+                            className="text-xs min-h-[60px]"
+                            placeholder="평가 의견을 수정하세요..."
+                          />
+                          <div className="flex gap-2 justify-end">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditingEvaluation(null);
+                                setEditEvalText('');
+                              }}
+                            >
+                              <X className="w-3 h-3 mr-1" />
+                              취소
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleEvaluationUpdate(idx, editEvalText)}
+                            >
+                              <Check className="w-3 h-3 mr-1" />
+                              저장
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

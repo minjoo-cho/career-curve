@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { LayoutGrid, Table2 } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { LayoutGrid, Table2, Filter, ArrowUpDown, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useJobStore } from '@/stores/jobStore';
 import { JobCard } from '@/components/board/JobCard';
@@ -8,8 +8,18 @@ import { TableView } from '@/components/board/TableView';
 import { JobPosting } from '@/types/job';
 import { JobStatus, STATUS_LABELS } from '@/types/job';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 type ViewMode = 'kanban' | 'table';
+type SortOption = 'newest' | 'oldest' | 'priority' | 'company';
+type FilterOption = 'all' | JobStatus;
 
 const STATUS_ORDER: JobStatus[] = [
   'reviewing',
@@ -21,9 +31,38 @@ const STATUS_ORDER: JobStatus[] = [
   'rejected-interview',
 ];
 
+const SORT_LABELS: Record<SortOption, string> = {
+  newest: '최신순',
+  oldest: '오래된순',
+  priority: '우선순위순',
+  company: '회사명순',
+};
+
 export function BoardTab() {
   const [viewMode, setViewMode] = useState<ViewMode>('kanban');
+  const [sortOption, setSortOption] = useState<SortOption>('newest');
+  const [filterOption, setFilterOption] = useState<FilterOption>('all');
   const { jobPostings, userName, goalStartDate, updateJobPosting } = useJobStore();
+
+  // Sort and filter jobs
+  const sortedJobs = useMemo(() => {
+    let filtered = filterOption === 'all' 
+      ? [...jobPostings] 
+      : jobPostings.filter(j => j.status === filterOption);
+    
+    switch (sortOption) {
+      case 'newest':
+        return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      case 'oldest':
+        return filtered.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      case 'priority':
+        return filtered.sort((a, b) => a.priority - b.priority);
+      case 'company':
+        return filtered.sort((a, b) => a.companyName.localeCompare(b.companyName));
+      default:
+        return filtered;
+    }
+  }, [jobPostings, sortOption, filterOption]);
 
   const interviewCount = jobPostings.filter((j) => j.status === 'interview').length;
   const totalCount = jobPostings.length;
@@ -31,10 +70,13 @@ export function BoardTab() {
     ? Math.floor((Date.now() - goalStartDate.getTime()) / (1000 * 60 * 60 * 24))
     : 0;
 
-  const groupedByStatus = STATUS_ORDER.reduce((acc, status) => {
-    acc[status] = jobPostings.filter((j) => j.status === status);
-    return acc;
-  }, {} as Record<JobStatus, typeof jobPostings>);
+  // Group sorted jobs by status for kanban
+  const groupedByStatus = useMemo(() => {
+    return STATUS_ORDER.reduce((acc, status) => {
+      acc[status] = sortedJobs.filter((j) => j.status === status);
+      return acc;
+    }, {} as Record<JobStatus, typeof sortedJobs>);
+  }, [sortedJobs]);
 
   const handleDropOnColumn = (jobId: string, newStatus: JobStatus) => {
     updateJobPosting(jobId, { status: newStatus });
@@ -47,30 +89,73 @@ export function BoardTab() {
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-bold text-foreground">보드</h1>
           
-          {/* View Toggle */}
-          <div className="flex bg-secondary rounded-lg p-0.5">
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                'h-7 px-2.5 rounded-md',
-                viewMode === 'kanban' && 'bg-card shadow-sm'
-              )}
-              onClick={() => setViewMode('kanban')}
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                'h-7 px-2.5 rounded-md',
-                viewMode === 'table' && 'bg-card shadow-sm'
-              )}
-              onClick={() => setViewMode('table')}
-            >
-              <Table2 className="w-4 h-4" />
-            </Button>
+          <div className="flex items-center gap-2">
+            {/* Filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-7 px-2">
+                  <Filter className="w-3.5 h-3.5 mr-1" />
+                  <span className="text-xs">{filterOption === 'all' ? '전체' : STATUS_LABELS[filterOption]}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>상태 필터</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setFilterOption('all')}>
+                  전체 ({jobPostings.length})
+                </DropdownMenuItem>
+                {STATUS_ORDER.map(status => (
+                  <DropdownMenuItem key={status} onClick={() => setFilterOption(status)}>
+                    {STATUS_LABELS[status]} ({jobPostings.filter(j => j.status === status).length})
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Sort */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-7 px-2">
+                  <ArrowUpDown className="w-3.5 h-3.5 mr-1" />
+                  <span className="text-xs">{SORT_LABELS[sortOption]}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>정렬</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {Object.entries(SORT_LABELS).map(([key, label]) => (
+                  <DropdownMenuItem key={key} onClick={() => setSortOption(key as SortOption)}>
+                    {label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* View Toggle */}
+            <div className="flex bg-secondary rounded-lg p-0.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'h-7 px-2.5 rounded-md',
+                  viewMode === 'kanban' && 'bg-card shadow-sm'
+                )}
+                onClick={() => setViewMode('kanban')}
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'h-7 px-2.5 rounded-md',
+                  viewMode === 'table' && 'bg-card shadow-sm'
+                )}
+                onClick={() => setViewMode('table')}
+              >
+                <Table2 className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -96,7 +181,7 @@ export function BoardTab() {
         {viewMode === 'kanban' ? (
           <KanbanView groupedByStatus={groupedByStatus} onDropOnColumn={handleDropOnColumn} />
         ) : (
-          <TableView jobs={jobPostings} />
+          <TableView jobs={sortedJobs} />
         )}
       </div>
     </div>
