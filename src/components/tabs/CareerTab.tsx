@@ -28,27 +28,7 @@ import {
 import { toast } from 'sonner';
 import { Experience, Resume, ExperienceType } from '@/types/job';
 import { supabase } from '@/integrations/supabase/client';
-
-// PDF text extraction helper - uses browser FileReader
-async function extractTextFromPdf(file: File): Promise<string> {
-  // For now, we'll read the file as text - in production you'd use a proper PDF parser
-  // The AI will still try to parse whatever text content it can get
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      // Try to extract any readable text from the PDF
-      const content = reader.result as string;
-      // Remove binary junk and keep readable parts
-      const cleanedText = content
-        .replace(/[^\x20-\x7E\uAC00-\uD7A3\u3131-\u314E\u314F-\u3163]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-      resolve(cleanedText);
-    };
-    reader.onerror = () => reject(new Error('Failed to read file'));
-    reader.readAsText(file);
-  });
-}
+import { extractTextFromPdf } from '@/lib/pdfParser';
 
 export function CareerTab() {
   const { experiences, resumes, addExperience, updateExperience, removeExperience, addResume, updateResume, removeResume } = useJobStore();
