@@ -52,7 +52,8 @@ Return a JSON object with:
 
 Always respond in Korean if the resume is in Korean, otherwise match the resume language.`;
 
-    const model = hasImages ? 'google/gemini-2.5-pro' : 'google/gemini-2.5-flash';
+    // 이미지 기반(OCR)일 때는 비전 성능이 더 좋은 모델을 사용
+    const model = hasImages ? 'openai/gpt-5-mini' : 'google/gemini-2.5-flash';
 
     console.log('Parsing resume with AI', {
       fileName,
@@ -69,12 +70,12 @@ Always respond in Korean if the resume is in Korean, otherwise match the resume 
           {
             type: 'text',
             text:
-              '아래 이력서 PDF 페이지 이미지에서 텍스트를 읽고(필요하면 OCR) 경력/프로젝트를 추출해 주세요. 내용이 불명확하면 experiences를 빈 배열로 반환하세요.'
+              '아래 이력서 PDF 페이지 이미지에서 텍스트를 읽고(필요하면 OCR) 경력/프로젝트를 추출해 주세요.\n\n규칙:\n- 문서에 실제로 있는 내용만 추출하세요(추측/창작 금지).\n- 읽을 수 없는 경우 experiences를 빈 배열로 반환하세요.\n- 가능한 한 원문 표현을 유지하세요(회사명/직함/프로젝트명 등).'
           },
         ];
 
         for (const img of pageImages.slice(0, 2)) {
-          parts.push({ type: 'image_url', image_url: { url: img } });
+          parts.push({ type: 'image_url', image_url: { url: img, detail: 'high' } });
         }
 
         return parts;
@@ -83,49 +84,56 @@ Always respond in Korean if the resume is in Korean, otherwise match the resume 
       return `Parse this resume and extract experiences:\n\n${String(resumeText).substring(0, 12000)}`;
     })();
 
+    const body: Record<string, unknown> = {
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent }
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "extract_resume_experiences",
+            description: "Extract work experiences and projects from resume",
+            parameters: {
+              type: "object",
+              properties: {
+                experiences: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      type: { type: "string", enum: ["work", "project"] },
+                      title: { type: "string" },
+                      company: { type: "string" },
+                      description: { type: "string" },
+                      bullets: { type: "array", items: { type: "string" } }
+                    },
+                    required: ["type", "title", "description", "bullets"]
+                  }
+                }
+              },
+              required: ["experiences"]
+            }
+          }
+        }
+      ],
+      tool_choice: { type: "function", function: { name: "extract_resume_experiences" } }
+    };
+
+    // openai 계열 모델은 max_completion_tokens 사용
+    if (String(model).startsWith('openai/')) {
+      body.max_completion_tokens = 1600;
+    }
+
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userContent }
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "extract_resume_experiences",
-              description: "Extract work experiences and projects from resume",
-              parameters: {
-                type: "object",
-                properties: {
-                  experiences: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        type: { type: "string", enum: ["work", "project"] },
-                        title: { type: "string" },
-                        company: { type: "string" },
-                        description: { type: "string" },
-                        bullets: { type: "array", items: { type: "string" } }
-                      },
-                      required: ["type", "title", "description", "bullets"]
-                    }
-                  }
-                },
-                required: ["experiences"]
-              }
-            }
-          }
-        ],
-        tool_choice: { type: "function", function: { name: "extract_resume_experiences" } }
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!aiResponse.ok) {

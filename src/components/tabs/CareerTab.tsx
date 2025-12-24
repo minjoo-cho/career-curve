@@ -80,9 +80,10 @@ export function CareerTab() {
 
       // 2) 텍스트가 거의 없으면(스캔본 등) → 이미지(OCR) 기반으로 분석
       let pageImages: string[] | undefined;
-      if (!resumeText || resumeText.trim().length < 50) {
+      if (!resumeText || resumeText.trim().length < 80) {
         try {
-          pageImages = await renderPdfToImageDataUrls(file, { maxPages: 2 });
+          // OCR 정확도 ↑: 해상도(scale) 올리고, 용량 ↓: JPEG 품질 낮춤
+          pageImages = await renderPdfToImageDataUrls(file, { maxPages: 2, scale: 2.4, quality: 0.72 });
           console.log('Rendered pages for OCR:', pageImages.length);
         } catch (err) {
           console.error('Failed to render PDF pages:', err);
@@ -90,7 +91,7 @@ export function CareerTab() {
       }
 
       // 3) 둘 다 실패하면 사용자에게 안내
-      if ((!resumeText || resumeText.trim().length < 50) && (!pageImages || pageImages.length === 0)) {
+      if ((!resumeText || resumeText.trim().length < 80) && (!pageImages || pageImages.length === 0)) {
         updateResume(newResume.id, {
           parseStatus: 'fail',
           parseError: 'PDF에서 텍스트를 추출할 수 없습니다. (스캔본/이미지 기반 PDF일 수 있어요) 경험을 직접 추가해주세요.'
@@ -114,9 +115,16 @@ export function CareerTab() {
         if (error) throw error;
 
         if (data?.experiences && data.experiences.length > 0) {
-          // 이전에 "이력서에서 가져온" 경험은 교체 (목데이터/이전 결과 잔존 방지)
+          // 이전에 "이력서에서 가져온" 경험 + 목데이터로 보이는 경험은 교체/정리
+          const mockLike = (e: any) => {
+            const title = String(e?.title ?? '').trim();
+            const company = String(e?.company ?? '').trim();
+            const desc = String(e?.description ?? '').trim();
+            return /^(예시|샘플|Sample|Dummy|목데이터)/i.test(title) || /목데이터|샘플|example/i.test(`${title} ${company} ${desc}`);
+          };
+
           experiences
-            .filter((e) => (e.usedInPostings || []).some((t) => t.startsWith('source:resume:')))
+            .filter((e) => (e.usedInPostings || []).some((t) => t.startsWith('source:resume:')) || mockLike(e))
             .forEach((e) => removeExperience(e.id));
 
           const validExperiences = data.experiences.filter((exp: any) => {
