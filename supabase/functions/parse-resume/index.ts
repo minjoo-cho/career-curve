@@ -76,67 +76,58 @@ serve(async (req) => {
 
     // (A) OCR 단계: 이미지가 있고 텍스트가 부족하면 OCR 수행
     let ocrText = '';
+    let ocrModel: string | undefined;
+
     if (hasImages && (!hasText || resumeText.trim().length < 100)) {
       console.log('Starting OCR with', pageImages.length, 'images');
-      
-      // gpt-5-mini로 OCR 수행 (vision 성능 우수)
+
+      // NOTE: 일부 모델/게이트웨이 조합에서 tool calling + vision이 불안정할 수 있어
+      // OCR 단계는 "그냥 텍스트"로 반환받아 안정적으로 처리합니다.
+      ocrModel = 'google/gemini-2.5-flash';
+
       const ocrUserParts: any[] = [
         {
           type: 'text',
-          text: `이 이력서 PDF 페이지들의 모든 텍스트를 읽어서 그대로 전사해주세요.
-- 회사명, 직책, 기간, 업무 내용 등 모든 텍스트를 빠짐없이 추출
-- 원본 언어 그대로 유지
-- 줄바꿈 유지
-- 읽을 수 없는 부분은 건너뛰기`,
+          text:
+            `이력서 페이지 이미지에서 보이는 텍스트를 **그대로** 전사(OCR)해주세요.\n` +
+            `- 회사명/직책/기간/업무/프로젝트/기술스택 등 보이는 모든 텍스트 포함\n` +
+            `- 원본 언어 유지(한국어/영어)\n` +
+            `- 줄바꿈을 최대한 유지\n` +
+            `- 추측/요약/해석/추가 설명 금지\n` +
+            `- 결과는 OCR 텍스트만 출력`,
         },
       ];
-      
+
       for (const img of pageImages.slice(0, 3)) {
         ocrUserParts.push({ type: 'image_url', image_url: { url: img, detail: 'high' } });
       }
 
       const ocrPayload: Record<string, unknown> = {
-        model: 'openai/gpt-5',
+        model: ocrModel,
         messages: [
-          { 
-            role: 'system', 
-            content: 'You are an expert OCR system. Extract and transcribe ALL text visible in the resume images accurately. Preserve original language and formatting.'
+          {
+            role: 'system',
+            content:
+              'You are an OCR transcription engine. Output only the exact text visible in the images. Do not add commentary.',
           },
           { role: 'user', content: ocrUserParts },
         ],
-        tools: [
-          {
-            type: 'function',
-            function: {
-              name: 'return_ocr_text',
-              description: 'Return the OCR-transcribed text from resume images',
-              parameters: {
-                type: 'object',
-                properties: {
-                  text: { type: 'string', description: 'All text extracted from the resume images' },
-                },
-                required: ['text'],
-                additionalProperties: false,
-              },
-            },
-          },
-        ],
-        tool_choice: { type: 'function', function: { name: 'return_ocr_text' } },
       };
 
       const ocrResult = await callGateway(ocrPayload);
-      
+
       if ('error' in ocrResult) {
         console.error('OCR failed:', ocrResult.message);
       } else {
         const ocrAiData = await (ocrResult as Response).json();
-        const ocrParsed = readToolArguments(ocrAiData);
-        ocrText = typeof ocrParsed?.text === 'string' ? ocrParsed.text : '';
+        const content = ocrAiData?.choices?.[0]?.message?.content;
+        ocrText = typeof content === 'string' ? content : '';
+
         console.log('OCR extracted text length:', ocrText.length);
-        
-        // 디버깅: OCR 텍스트 일부 출력
         if (ocrText.length > 0) {
           console.log('OCR text preview:', ocrText.substring(0, 500));
+        } else {
+          console.log('OCR empty. Raw AI response preview:', JSON.stringify(ocrAiData)?.substring(0, 800));
         }
       }
     }
@@ -287,6 +278,16 @@ serve(async (req) => {
         experiences: cleaned,
         ocrText: ocrText || undefined,
         extractedTextLength: combinedText.length,
+        debugInfo: {
+          fileName,
+          resumeId,
+          hasText,
+          hasImages,
+          ocrModel: ocrModel ?? null,
+          ocrTextLength: ocrText.length,
+          combinedTextLength: combinedText.length,
+          combinedTextPreview: combinedText.substring(0, 600),
+        },
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
