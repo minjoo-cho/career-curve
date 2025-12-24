@@ -39,36 +39,130 @@ serve(async (req) => {
       );
     }
 
-    // Step 1: Scrape the job posting URL using Firecrawl
-    console.log('Scraping URL:', url);
+    // Step 1: Scrape the job posting URL
+    const formattedUrl = url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`;
+    console.log('Scraping URL:', formattedUrl);
     
-    const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${firecrawlApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        url: url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`,
-        formats: ['markdown'],
-        onlyMainContent: true,
-      }),
-    });
+    let pageContent = '';
+    let pageTitle = '';
+    
+    // Check if this is LinkedIn or other restricted site
+    const isLinkedIn = formattedUrl.includes('linkedin.com');
+    
+    if (isLinkedIn) {
+      // For LinkedIn, try direct fetch with browser-like headers
+      console.log('LinkedIn detected, using direct fetch');
+      try {
+        const directResponse = await fetch(formattedUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+          },
+        });
+        
+        if (directResponse.ok) {
+          const html = await directResponse.text();
+          
+          // Extract title
+          const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+          pageTitle = titleMatch ? titleMatch[1].trim() : '';
+          
+          // Extract meta description
+          const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i);
+          const description = descMatch ? descMatch[1].trim() : '';
+          
+          // Extract JSON-LD structured data (LinkedIn often has this)
+          const jsonLdMatches = html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
+          let jsonLdContent = '';
+          for (const match of jsonLdMatches) {
+            try {
+              const parsed = JSON.parse(match[1]);
+              jsonLdContent += JSON.stringify(parsed, null, 2) + '\n\n';
+            } catch (e) {
+              // ignore parse errors
+            }
+          }
+          
+          // Extract visible text from main content areas
+          let bodyContent = '';
+          const mainMatch = html.match(/<main[^>]*>([\s\S]*?)<\/main>/i) ||
+                           html.match(/<article[^>]*>([\s\S]*?)<\/article>/i) ||
+                           html.match(/<div[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+          if (mainMatch) {
+            bodyContent = mainMatch[1]
+              .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+              .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+          }
+          
+          pageContent = `Title: ${pageTitle}\n\nDescription: ${description}\n\n${jsonLdContent ? 'Structured Data:\n' + jsonLdContent : ''}\n\nContent:\n${bodyContent}`;
+          console.log('Direct fetch content length:', pageContent.length);
+        } else {
+          console.log('Direct fetch failed:', directResponse.status);
+        }
+      } catch (e) {
+        console.error('Direct fetch error:', e);
+      }
+    }
+    
+    // If direct fetch didn't work or not LinkedIn, try Firecrawl
+    if (!pageContent || pageContent.length < 100) {
+      console.log('Trying Firecrawl...');
+      const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${firecrawlApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: formattedUrl,
+          formats: ['markdown'],
+          onlyMainContent: true,
+        }),
+      });
 
-    const scrapeData = await scrapeResponse.json();
+      const scrapeData = await scrapeResponse.json();
 
-    if (!scrapeResponse.ok || !scrapeData.success) {
-      console.error('Firecrawl error:', scrapeData);
+      if (!scrapeResponse.ok || !scrapeData.success) {
+        console.error('Firecrawl error:', scrapeData);
+        
+        // If both methods failed, return helpful error message
+        const isUnsupported = scrapeData.error?.includes('not currently supported');
+        if (isUnsupported) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'LinkedIn 공고는 현재 자동 분석이 제한됩니다. 공고 내용을 직접 복사하여 입력해주세요.',
+              unsupportedSite: true
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        return new Response(
+          JSON.stringify({ success: false, error: 'Failed to scrape URL' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      pageContent = scrapeData.data?.markdown || '';
+      pageTitle = scrapeData.data?.metadata?.title || pageTitle;
+    }
+    
+    console.log('Final content length:', pageContent.length);
+    
+    if (!pageContent || pageContent.length < 50) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Failed to scrape URL' }),
+        JSON.stringify({ 
+          success: false, 
+          error: '페이지 내용을 가져올 수 없습니다. URL을 확인하거나 공고 내용을 직접 입력해주세요.' 
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    const pageContent = scrapeData.data?.markdown || '';
-    const pageTitle = scrapeData.data?.metadata?.title || '';
-    
-    console.log('Scraped content length:', pageContent.length);
 
     // Step 2: Use AI to analyze and extract job posting information
     const systemPrompt = `You are a job posting analyzer. Extract structured information from job postings.
