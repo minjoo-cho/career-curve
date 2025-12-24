@@ -79,102 +79,76 @@ serve(async (req) => {
     let ocrModel: string | undefined;
 
     if (hasImages && (!hasText || resumeText.trim().length < 100)) {
-      console.log('Starting OCR with', pageImages.length, 'images');
-      console.log('OCR image[0] size(chars):', typeof pageImages?.[0] === 'string' ? pageImages[0].length : 0);
-      console.log('OCR image[1] size(chars):', typeof pageImages?.[1] === 'string' ? pageImages[1].length : 0);
+      const images = pageImages
+        .filter((x: unknown): x is string => typeof x === 'string' && x.startsWith('data:image/'))
+        .slice(0, 6);
 
-      // OCR 모델은 이미지 입력 안정성이 높은 모델로 사용
-      ocrModel = 'openai/gpt-5-mini';
+      console.log('Starting OCR with', images.length, 'images');
+      console.log(
+        'OCR image sizes(chars):',
+        images.map((s) => s.length)
+      );
 
-      const ocrUserParts: any[] = [
-        {
-          type: 'text',
-          text:
-            `이력서 페이지 이미지에서 보이는 텍스트를 **그대로** 전사(OCR)해주세요.\n` +
-            `- 회사명/직책/기간/업무/프로젝트/기술스택 등 보이는 모든 텍스트 포함\n` +
-            `- 원본 언어 유지(한국어/영어)\n` +
-            `- 줄바꿈을 최대한 유지\n` +
-            `- 추측/요약/해석/추가 설명 금지\n` +
-            `- 결과는 OCR 텍스트만 출력`,
-        },
-      ];
+      // NOTE: 일부 모델 조합에서 멀티페이지/대용량 요청이 불안정할 수 있어
+      // 페이지당 1장씩 OCR → 안정성을 최우선으로 합니다.
+      ocrModel = 'google/gemini-2.5-flash';
 
-      for (const img of pageImages.slice(0, 6)) {
-        ocrUserParts.push({ type: 'image_url', image_url: { url: img, detail: 'high' } });
-      }
+      const perPageTexts: string[] = [];
 
-      const ocrPayload: Record<string, unknown> = {
-        model: ocrModel,
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are an OCR transcription engine. Output only the exact text visible in the images. Do not add commentary.',
-          },
-          { role: 'user', content: ocrUserParts },
-        ],
-      };
+      for (let i = 0; i < images.length; i++) {
+        const img = images[i];
 
-      const ocrResult = await callGateway(ocrPayload);
+        const ocrPayload: Record<string, unknown> = {
+          model: ocrModel,
+          messages: [
+            {
+              role: 'system',
+              content:
+                'You are an OCR transcription engine. Output only the exact text visible in the image. Do not add commentary.',
+            },
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text:
+                    `이력서 이미지 ${i + 1}/${images.length}에서 보이는 텍스트를 **그대로** 전사(OCR)해주세요.\n` +
+                    `- 원본 언어 유지(한국어/영어)\n` +
+                    `- 줄바꿈을 최대한 유지\n` +
+                    `- 추측/요약/해석/추가 설명 금지\n` +
+                    `- 결과는 OCR 텍스트만 출력`,
+                },
+                { type: 'image_url', image_url: { url: img } },
+              ],
+            },
+          ],
+        };
 
-      if ('error' in ocrResult) {
-        console.error('OCR failed:', ocrResult.message);
-      } else {
+        const ocrResult = await callGateway(ocrPayload);
+
+        if ('error' in ocrResult) {
+          console.error('OCR failed(page):', i + 1, ocrResult.message);
+          continue;
+        }
+
         const ocrAiData = await (ocrResult as Response).json();
         const content = ocrAiData?.choices?.[0]?.message?.content;
-        ocrText = typeof content === 'string' ? content : '';
+        const pageText = typeof content === 'string' ? content : '';
 
-        console.log('OCR extracted text length:', ocrText.length);
-        if (ocrText.length > 0) {
-          console.log('OCR text preview:', ocrText.substring(0, 500));
-        } else {
-          console.log('OCR empty. Raw AI response preview:', JSON.stringify(ocrAiData)?.substring(0, 800));
+        console.log(`OCR page ${i + 1} text length:`, pageText.length);
+        if (!pageText.trim()) {
+          console.log(
+            `OCR page ${i + 1} empty. Raw preview:`,
+            JSON.stringify(ocrAiData)?.substring(0, 600)
+          );
+          continue;
         }
 
-        // OCR 텍스트가 너무 짧고 페이지가 더 있으면(다페이지 이력서) 다음 페이지 묶음도 추가로 OCR
-        if (ocrText.trim().length < 500 && pageImages.length > 6) {
-          console.log('OCR seems too short; running second OCR batch for additional pages');
-
-          const moreParts: any[] = [
-            {
-              type: 'text',
-              text:
-                `다음 페이지 이미지들에서 보이는 텍스트를 **그대로** 전사(OCR)해주세요.\n` +
-                `- 추측/요약/해석 금지\n` +
-                `- 결과는 OCR 텍스트만 출력`,
-            },
-          ];
-
-          for (const img of pageImages.slice(6, 12)) {
-            moreParts.push({ type: 'image_url', image_url: { url: img, detail: 'high' } });
-          }
-
-          const morePayload: Record<string, unknown> = {
-            model: ocrModel,
-            messages: [
-              {
-                role: 'system',
-                content:
-                  'You are an OCR transcription engine. Output only the exact text visible in the images. Do not add commentary.',
-              },
-              { role: 'user', content: moreParts },
-            ],
-          };
-
-          const moreResult = await callGateway(morePayload);
-          if ('error' in moreResult) {
-            console.error('Second OCR failed:', moreResult.message);
-          } else {
-            const moreData = await (moreResult as Response).json();
-            const moreContent = moreData?.choices?.[0]?.message?.content;
-            const moreText = typeof moreContent === 'string' ? moreContent : '';
-            if (moreText.trim()) {
-              ocrText = [ocrText, moreText].filter(Boolean).join('\n\n---\n\n');
-              console.log('OCR combined length after second batch:', ocrText.length);
-            }
-          }
-        }
+        perPageTexts.push(pageText.trim());
       }
+
+      ocrText = perPageTexts.join('\n\n---\n\n');
+      console.log('OCR extracted text length:', ocrText.length);
     }
 
     // 최종 텍스트 결합 (PDF 텍스트 + OCR)

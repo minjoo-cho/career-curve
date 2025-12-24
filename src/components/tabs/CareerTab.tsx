@@ -93,10 +93,11 @@ export function CareerTab() {
       let pageImages: string[] | undefined;
       if (!resumeText || resumeText.trim().length < 80) {
         try {
-          // CRITICAL: base64 이미지가 너무 크면 OCR 요청에서 이미지가 드랍(image_tokens=0)될 수 있어
-          // 페이지 수는 적당히, 해상도/품질을 낮춰 "전송 가능한 크기"를 보장합니다.
-          pageImages = await renderPdfToImageDataUrls(file, { maxPages: 4, scale: 1.8, quality: 0.6 });
+          // 안정적인 OCR을 위해: (1) 텍스트가 정말 없을 때만 이미지 렌더링
+          // (2) 너무 작은 이미지(글자 깨짐)도, 너무 큰 이미지(전송 실패)도 피하는 중간값
+          pageImages = await renderPdfToImageDataUrls(file, { maxPages: 6, scale: 1.9, quality: 0.72 });
           console.log('Rendered pages for OCR:', pageImages.length);
+          console.log('OCR page image sizes(chars):', pageImages.map((s) => s.length));
         } catch (err) {
           console.error('Failed to render PDF pages:', err);
         }
