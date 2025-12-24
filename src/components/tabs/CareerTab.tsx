@@ -39,10 +39,12 @@ export function CareerTab() {
   const [editingExperience, setEditingExperience] = useState<string | null>(null);
   const [newExperienceType, setNewExperienceType] = useState<ExperienceType>('work');
   const [isUploading, setIsUploading] = useState(false);
+  const [logResumeId, setLogResumeId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const workExperiences = experiences.filter(e => e.type === 'work');
   const projectExperiences = experiences.filter(e => e.type === 'project');
+  const logResume = logResumeId ? resumes.find(r => r.id === logResumeId) : undefined;
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -284,6 +286,15 @@ export function CareerTab() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="w-7 h-7"
+                          onClick={() => setLogResumeId(resume.id)}
+                          aria-label="파싱 로그 보기"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="w-7 h-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={() => removeResume(resume.id)}
                         >
@@ -419,6 +430,50 @@ export function CareerTab() {
           setEditingExperience(null);
         }}
       />
+
+      {/* Resume Parse Logs Dialog */}
+      <Dialog open={!!logResumeId} onOpenChange={(open) => !open && setLogResumeId(null)}>
+        <DialogContent className="max-w-[92%] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>이력서 인식 로그</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <p className="text-sm text-foreground font-medium truncate">{logResume?.fileName}</p>
+              <p className="text-xs text-muted-foreground">
+                PDF 텍스트: {(logResume?.extractedText?.length ?? 0).toLocaleString()}자 • OCR: {(logResume?.ocrText?.length ?? 0).toLocaleString()}자
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>PDF 텍스트(추출 결과)</Label>
+              <Textarea
+                value={logResume?.extractedText ?? ''}
+                readOnly
+                rows={8}
+                placeholder="(비어있으면 PDF에서 텍스트가 추출되지 않은 상태입니다)"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>OCR 텍스트(이미지 인식 결과)</Label>
+              <Textarea
+                value={logResume?.ocrText ?? ''}
+                readOnly
+                rows={8}
+                placeholder="(비어있으면 OCR 인식이 실패한 상태입니다)"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setLogResumeId(null)}>
+                닫기
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
