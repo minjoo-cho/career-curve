@@ -78,6 +78,7 @@ export interface TailoredResume {
   companyName: string;
   jobTitle: string;
   content: string; // AI가 생성한 이력서 내용
+  aiFeedback?: string; // AI의 채용담당자 관점 피드백
   language: 'ko' | 'en';
   createdAt: Date;
   updatedAt: Date;

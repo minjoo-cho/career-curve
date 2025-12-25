@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Plus, FileText, Upload, Trash2, Edit2, ChevronDown, ChevronUp, File, Loader2, Briefcase, FolderKanban, Download, FileCheck } from 'lucide-react';
+import { Plus, FileText, Upload, Trash2, Edit2, ChevronDown, ChevronUp, File, Loader2, Briefcase, FolderKanban, Download, FileCheck, Eye, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -30,6 +30,7 @@ import { Experience, Resume, ExperienceType, TailoredResume } from '@/types/job'
 import { supabase } from '@/integrations/supabase/client';
 import { extractTextFromPdf, renderPdfToImageDataUrls } from '@/lib/pdfParser';
 import { exportResumeToDocx } from '@/lib/resumeExporter';
+import { exportTailoredResumeToDocx, formatResumeForPreview } from '@/lib/tailoredResumeExporter';
 
 export function CareerTab() {
   const { experiences, resumes, tailoredResumes, userName, addExperience, updateExperience, removeExperience, addResume, updateResume, removeResume, updateTailoredResume, removeTailoredResume } = useJobStore();
@@ -40,6 +41,7 @@ export function CareerTab() {
   const [isAddingExperience, setIsAddingExperience] = useState(false);
   const [editingExperience, setEditingExperience] = useState<string | null>(null);
   const [editingTailoredResume, setEditingTailoredResume] = useState<TailoredResume | null>(null);
+  const [previewingTailoredResume, setPreviewingTailoredResume] = useState<TailoredResume | null>(null);
   const [newExperienceType, setNewExperienceType] = useState<ExperienceType>('work');
   const [isUploading, setIsUploading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -456,8 +458,10 @@ export function CareerTab() {
                   <TailoredResumeCard
                     key={resume.id}
                     resume={resume}
+                    onPreview={() => setPreviewingTailoredResume(resume)}
                     onEdit={() => setEditingTailoredResume(resume)}
                     onDelete={() => removeTailoredResume(resume.id)}
+                    userName={userName}
                   />
                 ))}
 
@@ -555,12 +559,46 @@ export function CareerTab() {
           setEditingTailoredResume(null);
         }}
       />
+
+      {/* Tailored Resume Preview Dialog */}
+      <TailoredResumePreviewDialog
+        resume={previewingTailoredResume}
+        open={!!previewingTailoredResume}
+        onOpenChange={(open) => !open && setPreviewingTailoredResume(null)}
+        userName={userName}
+      />
     </div>
   );
 }
 
-function TailoredResumeCard({ resume, onEdit, onDelete }: { resume: TailoredResume; onEdit: () => void; onDelete: () => void }) {
+function TailoredResumeCard({ 
+  resume, 
+  onPreview, 
+  onEdit, 
+  onDelete,
+  userName 
+}: { 
+  resume: TailoredResume; 
+  onPreview: () => void;
+  onEdit: () => void; 
+  onDelete: () => void;
+  userName: string;
+}) {
+  const [isExporting, setIsExporting] = useState(false);
   const dateStr = new Date(resume.createdAt).toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' }).replace(/\. /g, '.').replace(/\.$/, '');
+
+  const handleDownload = async () => {
+    setIsExporting(true);
+    try {
+      await exportTailoredResumeToDocx(resume, userName);
+      toast.success('이력서가 다운로드되었습니다');
+    } catch (err) {
+      console.error('Export error:', err);
+      toast.error('다운로드에 실패했습니다');
+    } finally {
+      setIsExporting(false);
+    }
+  };
   
   return (
     <div className="bg-secondary/30 rounded-lg p-3 group">
@@ -576,17 +614,30 @@ function TailoredResumeCard({ resume, onEdit, onDelete }: { resume: TailoredResu
             </Badge>
           </div>
         </div>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="ghost" size="icon" className="w-7 h-7" onClick={onEdit}>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="icon" className="w-7 h-7" onClick={onPreview} title="미리보기">
+            <Eye className="w-3.5 h-3.5" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="w-7 h-7" 
+            onClick={handleDownload}
+            disabled={isExporting}
+            title="다운로드"
+          >
+            {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+          </Button>
+          <Button variant="ghost" size="icon" className="w-7 h-7 opacity-0 group-hover:opacity-100 transition-opacity" onClick={onEdit} title="편집">
             <Edit2 className="w-3.5 h-3.5" />
           </Button>
-          <Button variant="ghost" size="icon" className="w-7 h-7 text-destructive hover:text-destructive" onClick={onDelete}>
+          <Button variant="ghost" size="icon" className="w-7 h-7 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={onDelete} title="삭제">
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
         </div>
       </div>
       <p className="text-xs text-muted-foreground line-clamp-2">
-        {resume.content.slice(0, 150)}...
+        {resume.content.replace(/[#*]/g, '').slice(0, 150)}...
       </p>
     </div>
   );
@@ -798,6 +849,93 @@ function ExperienceDialog({ open, onOpenChange, experience, defaultType, onSave 
             </Button>
             <Button className="flex-1" onClick={handleSave}>
               저장
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TailoredResumePreviewDialog({ 
+  resume, 
+  open, 
+  onOpenChange,
+  userName
+}: { 
+  resume: TailoredResume | null; 
+  open: boolean; 
+  onOpenChange: (open: boolean) => void;
+  userName: string;
+}) {
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleDownload = async () => {
+    if (!resume) return;
+    setIsExporting(true);
+    try {
+      await exportTailoredResumeToDocx(resume, userName);
+      toast.success('이력서가 다운로드되었습니다');
+    } catch (err) {
+      console.error('Export error:', err);
+      toast.error('다운로드에 실패했습니다');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  if (!resume) return null;
+
+  const previewContent = formatResumeForPreview(resume.content);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[92%] max-h-[85vh] rounded-2xl flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Eye className="w-5 h-5" />
+            이력서 미리보기
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 flex-1 overflow-hidden flex flex-col">
+          <p className="text-sm text-muted-foreground">
+            {resume.companyName} - {resume.jobTitle}
+          </p>
+          
+          {/* Clean Resume Preview */}
+          <div className="bg-white dark:bg-zinc-900 border border-border rounded-lg p-4 flex-1 overflow-y-auto min-h-[250px]">
+            <pre className="text-sm whitespace-pre-wrap font-sans text-foreground leading-relaxed">
+              {previewContent}
+            </pre>
+          </div>
+
+          {/* AI Feedback Section */}
+          {resume.aiFeedback && (
+            <Collapsible defaultOpen>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-full justify-between text-sm">
+                  <span className="flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4" />
+                    채용담당자 관점 AI 피드백
+                  </span>
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="bg-accent/50 rounded-lg p-3 text-sm text-muted-foreground">
+                  {resume.aiFeedback}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+              닫기
+            </Button>
+            <Button className="flex-1" onClick={handleDownload} disabled={isExporting}>
+              {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+              DOCX 다운로드
             </Button>
           </div>
         </div>
