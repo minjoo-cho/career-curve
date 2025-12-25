@@ -82,6 +82,8 @@ export function ResumeBuilderDialog({
     return detectLanguage(textToAnalyze);
   }, [job.title, job.summary]);
 
+  const [aiFeedback, setAiFeedback] = useState<string | null>(null);
+
   const handleGenerate = async () => {
     if (selectedExperiences.length === 0) {
       toast.error('최소 1개의 경험을 선택해주세요');
@@ -90,6 +92,7 @@ export function ResumeBuilderDialog({
 
     setIsGenerating(true);
     setGeneratedContent(null);
+    setAiFeedback(null);
 
     try {
       const selectedExps = experiences.filter(e => selectedExperiences.includes(e.id));
@@ -110,6 +113,7 @@ export function ResumeBuilderDialog({
       if (!data?.success) throw new Error(data?.error || 'Failed to generate resume');
 
       setGeneratedContent(data.content);
+      setAiFeedback(data.aiFeedback || null);
       setStep(3);
       toast.success('맞춤 이력서가 생성되었습니다');
     } catch (error) {
@@ -136,6 +140,7 @@ export function ResumeBuilderDialog({
       companyName: job.companyName,
       jobTitle: job.title,
       content: generatedContent,
+      aiFeedback: aiFeedback || undefined,
       language,
       createdAt: now,
       updatedAt: now,
@@ -262,8 +267,17 @@ export function ResumeBuilderDialog({
     </div>
   );
 
+  // Prevent closing during generation
+  const handleOpenChange = (open: boolean) => {
+    if (!open && isGenerating) {
+      toast.error('생성 중에는 나갈 수 없습니다. 완료될 때까지 기다려주세요.');
+      return;
+    }
+    onOpenChange(open);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md max-h-[85vh] rounded-2xl flex flex-col p-0">
         <div className="px-6 pt-6">
           <DialogHeader>
@@ -295,27 +309,34 @@ export function ResumeBuilderDialog({
           )}
 
           {step === 2 && (
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setStep(1)} disabled={isGenerating}>
-                이전
-              </Button>
-              <Button
-                className="flex-1"
-                onClick={handleGenerate}
-                disabled={isGenerating || selectedExperiences.length === 0}
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    생성 중...
-                  </>
-                ) : (
-                  <>
-                    맞춤 이력서 생성
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </>
-                )}
-              </Button>
+            <div className="flex flex-col gap-2">
+              {isGenerating && (
+                <div className="bg-warning/10 text-warning text-xs p-2 rounded-lg text-center">
+                  ⏱ 약 15초 소요됩니다. 중간에 나가면 저장되지 않습니다.
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setStep(1)} disabled={isGenerating}>
+                  이전
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handleGenerate}
+                  disabled={isGenerating || selectedExperiences.length === 0}
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      생성 중...
+                    </>
+                  ) : (
+                    <>
+                      맞춤 이력서 생성
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           )}
 
