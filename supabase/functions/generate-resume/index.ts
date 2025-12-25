@@ -55,7 +55,9 @@ serve(async (req) => {
 2. 수치화된 성과가 있다면 강조하세요.
 3. 공고에서 사용하는 키워드를 자연스럽게 포함하세요.
 4. 간결하고 임팩트 있게 작성하세요.
-5. 결과는 한국어로 작성하세요.`
+5. 결과는 한국어로 작성하세요.
+6. 각 역량별로 어떻게 개선했는지 간단한 피드백도 포함해주세요.
+7. 기존 경험 내용을 공고 요구사항에 맞게 보완하고 강화하세요.`
       : `You are a professional resume consultant. Optimize the candidate's experiences to match the key competencies required by the job posting.
 
 Rules:
@@ -63,7 +65,9 @@ Rules:
 2. Emphasize quantified achievements when available.
 3. Naturally incorporate keywords used in the job posting.
 4. Write concisely with impact.
-5. Write the result in English.`;
+5. Write the result in English.
+6. Include brief feedback on how each competency was improved.
+7. Enhance and strengthen the original experience content to match job requirements.`;
 
     const userPrompt = language === 'ko'
       ? `## 채용 공고 정보
@@ -84,7 +88,13 @@ ${exp.bullets.map(b => `- ${b}`).join('\n')}
 `).join('\n')}
 
 위 경험들을 핵심 요구 역량에 맞게 재구성하여 이력서용 텍스트를 생성해주세요.
-각 경험마다 다음 형식으로 작성해주세요:
+
+먼저 [AI 피드백] 섹션에서 각 핵심 역량별로:
+- 기존 경험에서 관련 내용을 어떻게 찾았는지
+- 어떤 부분을 강화/보완했는지
+- 추가로 어필하면 좋을 포인트
+
+그 다음 각 경험마다 다음 형식으로 작성해주세요:
 
 [경험 제목]
 [회사명] | [기간]
@@ -109,7 +119,13 @@ ${exp.bullets.map(b => `- ${b}`).join('\n')}
 `).join('\n')}
 
 Please restructure the above experiences to match the key required competencies and generate resume text.
-For each experience, use the following format:
+
+First, include an [AI Feedback] section for each key competency:
+- How you found relevant content from existing experiences
+- What aspects were strengthened/enhanced
+- Additional points that could be highlighted
+
+Then for each experience, use the following format:
 
 [Experience Title]
 [Company Name] | [Period]

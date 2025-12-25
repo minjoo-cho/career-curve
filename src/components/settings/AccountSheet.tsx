@@ -94,14 +94,31 @@ export function AccountSheet({ open, onOpenChange }: AccountSheetProps) {
   ];
 
   const handleDeleteAccount = async () => {
-    localStorage.removeItem('jobflow-storage');
-    if (user) {
-      await signOut();
+    try {
+      if (!user) {
+        toast.error('로그인이 필요합니다');
+        return;
+      }
+
+      // Call edge function to delete account
+      const { data, error } = await supabase.functions.invoke('delete-account');
+
+      if (error) {
+        console.error('Delete account error:', error);
+        throw new Error(error.message);
+      }
+
+      // Clear local storage
+      localStorage.removeItem('jobflow-storage');
+      
+      toast.success('계정이 삭제되었습니다');
+      setShowDeleteDialog(false);
+      onOpenChange(false);
+      navigate('/auth', { replace: true });
+    } catch (error) {
+      console.error('Error during account deletion:', error);
+      toast.error(error instanceof Error ? error.message : '계정 삭제에 실패했습니다');
     }
-    toast.success('모든 데이터가 삭제되었습니다');
-    setShowDeleteDialog(false);
-    onOpenChange(false);
-    window.location.reload();
   };
 
   return (
