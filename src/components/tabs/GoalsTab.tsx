@@ -342,6 +342,7 @@ function GoalsEditDialog({ open, onOpenChange, goal, onSave }: GoalsEditDialogPr
     startDate: toDateInputValue(goal.startDate),
     endDate: goal.endDate ? toDateInputValue(goal.endDate) : '',
   });
+  const [resultError, setResultError] = useState(false);
 
   const updateCriteriaWeight = (index: number, weight: number) => {
     const updated = [...formData.companyEvalCriteria];
@@ -364,6 +365,13 @@ function GoalsEditDialog({ open, onOpenChange, goal, onSave }: GoalsEditDialogPr
   const handleSave = () => {
     const startDate = formData.startDate ? new Date(formData.startDate) : new Date();
     const endDate = formData.endDate ? new Date(formData.endDate) : undefined;
+
+    // If endDate is set, result is required
+    if (endDate && !formData.result.trim()) {
+      setResultError(true);
+      return;
+    }
+    setResultError(false);
 
     onSave({
       ...goal,
@@ -449,14 +457,23 @@ function GoalsEditDialog({ open, onOpenChange, goal, onSave }: GoalsEditDialogPr
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="result">결과</Label>
+            <Label htmlFor="result" className={cn(resultError && "text-destructive")}>
+              결과 {formData.endDate && <span className="text-destructive">*</span>}
+            </Label>
             <Textarea
               id="result"
               value={formData.result}
-              onChange={(e) => setFormData({ ...formData, result: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, result: e.target.value });
+                if (e.target.value.trim()) setResultError(false);
+              }}
               rows={2}
               placeholder="이 목표의 결과를 기록하세요"
+              className={cn(resultError && "border-destructive ring-destructive focus-visible:ring-destructive")}
             />
+            {resultError && (
+              <p className="text-xs text-destructive">종료일을 입력하려면 결과를 먼저 작성해주세요.</p>
+            )}
           </div>
 
           {/* Company Eval Criteria */}
