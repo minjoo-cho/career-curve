@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { JobPosting, KeyCompetency, Experience } from '@/types/job';
+import { JobPosting, KeyCompetency, Experience, TailoredResume } from '@/types/job';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { FileText, CheckCircle2, Loader2, Copy, ArrowRight } from 'lucide-react';
+import { FileText, CheckCircle2, Loader2, Copy, ArrowRight, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useJobStore } from '@/stores/jobStore';
@@ -51,7 +51,7 @@ export function ResumeBuilderDialog({
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
   const [rawAIContent, setRawAIContent] = useState<string | null>(null);
-  const { addExperience } = useJobStore();
+  const { addTailoredResume } = useJobStore();
 
   const workExperiences = useMemo(() => experiences.filter(e => e.type === 'work'), [experiences]);
   const projectExperiences = useMemo(() => experiences.filter(e => e.type === 'project'), [experiences]);
@@ -125,31 +125,20 @@ export function ResumeBuilderDialog({
   const handleSaveToCareer = () => {
     if (!generatedContent) return;
 
-    const bullets = generatedContent
-      .split('\n')
-      .map(l => l.trim())
-      .filter(Boolean)
-      .filter(line => line.startsWith('•') || line.startsWith('-'))
-      .map(line => line.replace(/^[-•]\s*/, '').trim());
-
-    // Generate version name with date
-    const today = new Date();
-    const dateStr = `${today.getFullYear().toString().slice(2)}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
-    const versionTitle = `${job.companyName}_${dateStr}_ver_resume`;
-
-    const newExperience: Experience = {
+    const now = new Date();
+    const newTailoredResume: TailoredResume = {
       id: Date.now().toString(),
-      type: 'project',
-      title: versionTitle,
-      company: job.companyName,
-      description: `${job.title} 포지션 맞춤 이력서 (${language === 'ko' ? '국문' : '영문'})`,
-      bullets: bullets.length ? bullets : [generatedContent.slice(0, 200)],
-      usedInPostings: [job.id],
-      createdAt: new Date(),
+      jobPostingId: job.id,
+      companyName: job.companyName,
+      jobTitle: job.title,
+      content: generatedContent,
+      language,
+      createdAt: now,
+      updatedAt: now,
     };
 
-    addExperience(newExperience);
-    toast.success('경력 탭에 새 버전으로 저장되었습니다');
+    addTailoredResume(newTailoredResume);
+    toast.success('공고별 이력서가 저장되었습니다');
     onOpenChange(false);
   };
 
@@ -329,7 +318,8 @@ export function ResumeBuilderDialog({
                   복사
                 </Button>
                 <Button className="flex-1" onClick={handleSaveToCareer}>
-                  경력탭에 저장
+                  <Save className="w-4 h-4 mr-2" />
+                  공고별 이력서 저장
                 </Button>
               </div>
               <Button

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { JobPosting, ChatMessage, Experience, CareerGoal, GoalHistory, Resume } from '@/types/job';
+import { JobPosting, ChatMessage, Experience, CareerGoal, GoalHistory, Resume, TailoredResume } from '@/types/job';
 
 interface JobStore {
   // Job postings
@@ -25,6 +25,12 @@ interface JobStore {
   addResume: (resume: Resume) => void;
   updateResume: (id: string, updates: Partial<Resume>) => void;
   removeResume: (id: string) => void;
+
+  // Tailored Resumes (공고별 맞춤 이력서)
+  tailoredResumes: TailoredResume[];
+  addTailoredResume: (resume: TailoredResume) => void;
+  updateTailoredResume: (id: string, updates: Partial<TailoredResume>) => void;
+  removeTailoredResume: (id: string) => void;
 
   // Goals
   currentGoal: CareerGoal | null;
@@ -121,6 +127,21 @@ export const useJobStore = create<JobStore>()(
           resumes: state.resumes.filter((r) => r.id !== id),
         })),
 
+      // Tailored Resumes
+      tailoredResumes: [],
+      addTailoredResume: (resume) =>
+        set((state) => ({ tailoredResumes: [...state.tailoredResumes, resume] })),
+      updateTailoredResume: (id, updates) =>
+        set((state) => ({
+          tailoredResumes: state.tailoredResumes.map((r) =>
+            r.id === id ? { ...r, ...updates, updatedAt: new Date() } : r
+          ),
+        })),
+      removeTailoredResume: (id) =>
+        set((state) => ({
+          tailoredResumes: state.tailoredResumes.filter((r) => r.id !== id),
+        })),
+
       // Goals
       currentGoal: {
         id: '1',
@@ -161,6 +182,7 @@ export const useJobStore = create<JobStore>()(
         messages: state.messages,
         experiences: state.experiences,
         resumes: state.resumes,
+        tailoredResumes: state.tailoredResumes,
         currentGoal: state.currentGoal,
         goalHistory: state.goalHistory,
         userName: state.userName,
@@ -185,6 +207,11 @@ export const useJobStore = create<JobStore>()(
             ...r,
             uploadedAt: new Date(r.uploadedAt),
             parsedAt: r.parsedAt ? new Date(r.parsedAt) : undefined,
+          }));
+          state.tailoredResumes = (state.tailoredResumes || []).map((r) => ({
+            ...r,
+            createdAt: new Date(r.createdAt),
+            updatedAt: new Date(r.updatedAt),
           }));
           if (state.currentGoal) {
             state.currentGoal.createdAt = new Date(state.currentGoal.createdAt);

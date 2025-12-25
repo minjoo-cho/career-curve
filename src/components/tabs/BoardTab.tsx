@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { LayoutGrid, Table2, Filter, ArrowUpDown, ChevronDown } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useJobStore } from '@/stores/jobStore';
 import { JobCard } from '@/components/board/JobCard';
@@ -19,7 +20,13 @@ import {
 
 type ViewMode = 'kanban' | 'table';
 type SortOption = 'newest' | 'oldest' | 'priority' | 'company';
-type FilterOption = 'all' | JobStatus;
+
+// 필터 옵션: 경력/근무형태/위치 기준
+interface FilterState {
+  minExperience: string;
+  workType: string;
+  location: string;
+}
 
 const STATUS_ORDER: JobStatus[] = [
   'reviewing',
@@ -34,21 +41,47 @@ const STATUS_ORDER: JobStatus[] = [
 const SORT_LABELS: Record<SortOption, string> = {
   newest: '최신순',
   oldest: '오래된순',
-  priority: '우선순위순',
-  company: '회사명순',
+  priority: '추천순',
+  company: '회사명순 (한글→영문)',
 };
 
 export function BoardTab() {
   const [viewMode, setViewMode] = useState<ViewMode>('kanban');
-  const [sortOption, setSortOption] = useState<SortOption>('newest');
-  const [filterOption, setFilterOption] = useState<FilterOption>('all');
+  const [sortOption, setSortOption] = useState<SortOption>('priority');
+  const [filters, setFilters] = useState<FilterState>({ minExperience: '', workType: '', location: '' });
   const { jobPostings, userName, currentGoal, updateJobPosting } = useJobStore();
+
+  // 필터 옵션 목록 추출
+  const filterOptions = useMemo(() => {
+    const experiences = [...new Set(jobPostings.map(j => j.minExperience).filter(Boolean))] as string[];
+    const workTypes = [...new Set(jobPostings.map(j => j.workType).filter(Boolean))] as string[];
+    const locations = [...new Set(jobPostings.map(j => j.location).filter(Boolean))] as string[];
+    return { experiences, workTypes, locations };
+  }, [jobPostings]);
+
+  // 한글→영문 정렬 함수
+  const koreanFirstCompare = (a: string, b: string) => {
+    const aIsKorean = /^[가-힣]/.test(a);
+    const bIsKorean = /^[가-힣]/.test(b);
+    if (aIsKorean && !bIsKorean) return -1;
+    if (!aIsKorean && bIsKorean) return 1;
+    return a.localeCompare(b, 'ko');
+  };
 
   // Sort and filter jobs
   const sortedJobs = useMemo(() => {
-    let filtered = filterOption === 'all' 
-      ? [...jobPostings] 
-      : jobPostings.filter(j => j.status === filterOption);
+    let filtered = [...jobPostings];
+    
+    // 경력/근무형태/위치 필터 적용
+    if (filters.minExperience) {
+      filtered = filtered.filter(j => j.minExperience === filters.minExperience);
+    }
+    if (filters.workType) {
+      filtered = filtered.filter(j => j.workType === filters.workType);
+    }
+    if (filters.location) {
+      filtered = filtered.filter(j => j.location === filters.location);
+    }
     
     switch (sortOption) {
       case 'newest':
@@ -56,13 +89,19 @@ export function BoardTab() {
       case 'oldest':
         return filtered.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
       case 'priority':
-        return filtered.sort((a, b) => a.priority - b.priority);
+        // fitScore 기반 우선순위 (높을수록 좋음)
+        return filtered.sort((a, b) => {
+          const aScore = a.fitScore ?? 0;
+          const bScore = b.fitScore ?? 0;
+          if (bScore !== aScore) return bScore - aScore;
+          return a.priority - b.priority;
+        });
       case 'company':
-        return filtered.sort((a, b) => a.companyName.localeCompare(b.companyName));
+        return filtered.sort((a, b) => koreanFirstCompare(a.companyName, b.companyName));
       default:
         return filtered;
     }
-  }, [jobPostings, sortOption, filterOption]);
+  }, [jobPostings, sortOption, filters]);
 
   const interviewCount = jobPostings.filter((j) => j.status === 'interview').length;
   const totalCount = jobPostings.length;
@@ -91,25 +130,79 @@ export function BoardTab() {
           <h1 className="text-xl font-bold text-foreground">보드</h1>
           
           <div className="flex items-center gap-2">
-            {/* Filter */}
+            {/* Filter - 경력/근무형태/위치 기준 */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-7 px-2">
                   <Filter className="w-3.5 h-3.5 mr-1" />
-                  <span className="text-xs">{filterOption === 'all' ? '전체' : STATUS_LABELS[filterOption]}</span>
+                  <span className="text-xs">필터</span>
+                  {(filters.minExperience || filters.workType || filters.location) && (
+                    <Badge variant="secondary" className="ml-1 text-[10px]">적용중</Badge>
+                  )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>상태 필터</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>필터 (공고 정보 기준)</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setFilterOption('all')}>
-                  전체 ({jobPostings.length})
+                
+                <div className="px-2 py-1.5">
+                  <p className="text-xs font-medium mb-1">최소 경력</p>
+                  {filterOptions.experiences.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {filterOptions.experiences.map(exp => (
+                        <Badge
+                          key={exp}
+                          variant={filters.minExperience === exp ? 'default' : 'outline'}
+                          className="text-xs cursor-pointer"
+                          onClick={() => setFilters(f => ({ ...f, minExperience: f.minExperience === exp ? '' : exp }))}
+                        >
+                          {exp}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : <p className="text-xs text-muted-foreground">데이터 없음</p>}
+                </div>
+
+                <div className="px-2 py-1.5">
+                  <p className="text-xs font-medium mb-1">근무 형태</p>
+                  {filterOptions.workTypes.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {filterOptions.workTypes.map(wt => (
+                        <Badge
+                          key={wt}
+                          variant={filters.workType === wt ? 'default' : 'outline'}
+                          className="text-xs cursor-pointer"
+                          onClick={() => setFilters(f => ({ ...f, workType: f.workType === wt ? '' : wt }))}
+                        >
+                          {wt}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : <p className="text-xs text-muted-foreground">데이터 없음</p>}
+                </div>
+
+                <div className="px-2 py-1.5">
+                  <p className="text-xs font-medium mb-1">위치</p>
+                  {filterOptions.locations.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {filterOptions.locations.map(loc => (
+                        <Badge
+                          key={loc}
+                          variant={filters.location === loc ? 'default' : 'outline'}
+                          className="text-xs cursor-pointer"
+                          onClick={() => setFilters(f => ({ ...f, location: f.location === loc ? '' : loc }))}
+                        >
+                          {loc}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : <p className="text-xs text-muted-foreground">데이터 없음</p>}
+                </div>
+
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setFilters({ minExperience: '', workType: '', location: '' })}>
+                  필터 초기화
                 </DropdownMenuItem>
-                {STATUS_ORDER.map(status => (
-                  <DropdownMenuItem key={status} onClick={() => setFilterOption(status)}>
-                    {STATUS_LABELS[status]} ({jobPostings.filter(j => j.status === status).length})
-                  </DropdownMenuItem>
-                ))}
               </DropdownMenuContent>
             </DropdownMenu>
 
