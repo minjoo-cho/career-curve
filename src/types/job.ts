@@ -71,6 +71,18 @@ export interface Experience {
   createdAt: Date;
 }
 
+// 공고별 맞춤 이력서
+export interface TailoredResume {
+  id: string;
+  jobPostingId: string;
+  companyName: string;
+  jobTitle: string;
+  content: string; // AI가 생성한 이력서 내용
+  language: 'ko' | 'en';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Resume file data
 export interface Resume {
   id: string;

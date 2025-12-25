@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Plus, FileText, Upload, Trash2, Edit2, ChevronDown, ChevronUp, File, Loader2, Briefcase, FolderKanban, Download } from 'lucide-react';
+import { Plus, FileText, Upload, Trash2, Edit2, ChevronDown, ChevronUp, File, Loader2, Briefcase, FolderKanban, Download, FileCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -26,18 +26,20 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Experience, Resume, ExperienceType } from '@/types/job';
+import { Experience, Resume, ExperienceType, TailoredResume } from '@/types/job';
 import { supabase } from '@/integrations/supabase/client';
 import { extractTextFromPdf, renderPdfToImageDataUrls } from '@/lib/pdfParser';
 import { exportResumeToDocx } from '@/lib/resumeExporter';
 
 export function CareerTab() {
-  const { experiences, resumes, userName, addExperience, updateExperience, removeExperience, addResume, updateResume, removeResume } = useJobStore();
+  const { experiences, resumes, tailoredResumes, userName, addExperience, updateExperience, removeExperience, addResume, updateResume, removeResume, updateTailoredResume, removeTailoredResume } = useJobStore();
   const [resumesOpen, setResumesOpen] = useState(true);
   const [workOpen, setWorkOpen] = useState(true);
   const [projectOpen, setProjectOpen] = useState(true);
+  const [tailoredOpen, setTailoredOpen] = useState(true);
   const [isAddingExperience, setIsAddingExperience] = useState(false);
   const [editingExperience, setEditingExperience] = useState<string | null>(null);
+  const [editingTailoredResume, setEditingTailoredResume] = useState<TailoredResume | null>(null);
   const [newExperienceType, setNewExperienceType] = useState<ExperienceType>('work');
   const [isUploading, setIsUploading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -435,6 +437,39 @@ export function CareerTab() {
             </CollapsibleContent>
           </div>
         </Collapsible>
+
+        {/* Tailored Resumes Section - 공고별 이력서 */}
+        <Collapsible open={tailoredOpen} onOpenChange={setTailoredOpen}>
+          <div className="bg-card rounded-xl border border-border card-shadow overflow-hidden">
+            <CollapsibleTrigger className="w-full flex items-center justify-between p-4">
+              <div className="flex items-center gap-2">
+                <FileCheck className="w-5 h-5 text-primary" />
+                <h2 className="font-semibold text-foreground">공고별 이력서</h2>
+                <Badge variant="secondary" className="text-xs">{tailoredResumes.length}</Badge>
+              </div>
+              {tailoredOpen ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
+            </CollapsibleTrigger>
+            
+            <CollapsibleContent>
+              <div className="px-4 pb-4 space-y-3">
+                {tailoredResumes.map((resume) => (
+                  <TailoredResumeCard
+                    key={resume.id}
+                    resume={resume}
+                    onEdit={() => setEditingTailoredResume(resume)}
+                    onDelete={() => removeTailoredResume(resume.id)}
+                  />
+                ))}
+
+                {tailoredResumes.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-2">
+                    보드에서 공고 카드를 선택 후 &quot;맞춤 이력서 만들기&quot;로 생성할 수 있습니다
+                  </p>
+                )}
+              </div>
+            </CollapsibleContent>
+          </div>
+        </Collapsible>
       </div>
 
       {/* Experience Add/Edit Dialog */}
@@ -506,6 +541,53 @@ export function CareerTab() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Tailored Resume Edit Dialog */}
+      <TailoredResumeEditDialog
+        resume={editingTailoredResume}
+        open={!!editingTailoredResume}
+        onOpenChange={(open) => !open && setEditingTailoredResume(null)}
+        onSave={(content) => {
+          if (editingTailoredResume) {
+            updateTailoredResume(editingTailoredResume.id, { content });
+            toast.success('이력서가 수정되었습니다');
+          }
+          setEditingTailoredResume(null);
+        }}
+      />
+    </div>
+  );
+}
+
+function TailoredResumeCard({ resume, onEdit, onDelete }: { resume: TailoredResume; onEdit: () => void; onDelete: () => void }) {
+  const dateStr = new Date(resume.createdAt).toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' }).replace(/\. /g, '.').replace(/\.$/, '');
+  
+  return (
+    <div className="bg-secondary/30 rounded-lg p-3 group">
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-sm text-foreground truncate">
+            {resume.companyName} - {resume.jobTitle}
+          </h3>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>{dateStr}</span>
+            <Badge variant="outline" className="text-[10px]">
+              {resume.language === 'ko' ? '국문' : '영문'}
+            </Badge>
+          </div>
+        </div>
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button variant="ghost" size="icon" className="w-7 h-7" onClick={onEdit}>
+            <Edit2 className="w-3.5 h-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="w-7 h-7 text-destructive hover:text-destructive" onClick={onDelete}>
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground line-clamp-2">
+        {resume.content.slice(0, 150)}...
+      </p>
     </div>
   );
 }
@@ -715,6 +797,56 @@ function ExperienceDialog({ open, onOpenChange, experience, defaultType, onSave 
               취소
             </Button>
             <Button className="flex-1" onClick={handleSave}>
+              저장
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TailoredResumeEditDialog({ 
+  resume, 
+  open, 
+  onOpenChange, 
+  onSave 
+}: { 
+  resume: TailoredResume | null; 
+  open: boolean; 
+  onOpenChange: (open: boolean) => void; 
+  onSave: (content: string) => void;
+}) {
+  const [content, setContent] = useState(resume?.content || '');
+
+  // Reset when resume changes
+  if (resume && content !== resume.content && open) {
+    setContent(resume.content);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[92%] max-h-[80vh] rounded-2xl flex flex-col">
+        <DialogHeader>
+          <DialogTitle>공고별 이력서 편집</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 flex-1 overflow-hidden flex flex-col">
+          {resume && (
+            <p className="text-sm text-muted-foreground">
+              {resume.companyName} - {resume.jobTitle}
+            </p>
+          )}
+          <Textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            className="flex-1 min-h-[300px] resize-none"
+            placeholder="이력서 내용..."
+          />
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+              취소
+            </Button>
+            <Button className="flex-1" onClick={() => onSave(content)}>
               저장
             </Button>
           </div>
