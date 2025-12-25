@@ -179,7 +179,19 @@ export function JobDetailDialog({ job, open, onOpenChange }: JobDetailDialogProp
                     <DialogTitle className="text-xl font-bold mt-1">{job.title}</DialogTitle>
                   </div>
                   {job.sourceUrl && (
-                    <Button variant="outline" size="icon" className="shrink-0" onClick={() => window.open(job.sourceUrl, '_blank')}>
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      className="shrink-0" 
+                      onClick={() => {
+                        // Use noopener,noreferrer to avoid LinkedIn blocking
+                        const link = document.createElement('a');
+                        link.href = job.sourceUrl!;
+                        link.target = '_blank';
+                        link.rel = 'noopener noreferrer';
+                        link.click();
+                      }}
+                    >
                       <ExternalLink className="w-4 h-4" />
                     </Button>
                   )}

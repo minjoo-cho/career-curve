@@ -50,6 +50,7 @@ export function ResumeBuilderDialog({
   const [selectedExperiences, setSelectedExperiences] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
+  const [rawAIContent, setRawAIContent] = useState<string | null>(null);
   const { addExperience } = useJobStore();
 
   const workExperiences = useMemo(() => experiences.filter(e => e.type === 'work'), [experiences]);
@@ -131,10 +132,15 @@ export function ResumeBuilderDialog({
       .filter(line => line.startsWith('•') || line.startsWith('-'))
       .map(line => line.replace(/^[-•]\s*/, '').trim());
 
+    // Generate version name with date
+    const today = new Date();
+    const dateStr = `${today.getFullYear().toString().slice(2)}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
+    const versionTitle = `${job.companyName}_${dateStr}_ver_resume`;
+
     const newExperience: Experience = {
       id: Date.now().toString(),
       type: 'project',
-      title: `${job.companyName} 맞춤 이력서`,
+      title: versionTitle,
       company: job.companyName,
       description: `${job.title} 포지션 맞춤 이력서 (${language === 'ko' ? '국문' : '영문'})`,
       bullets: bullets.length ? bullets : [generatedContent.slice(0, 200)],
@@ -143,7 +149,7 @@ export function ResumeBuilderDialog({
     };
 
     addExperience(newExperience);
-    toast.success('경력 탭에 저장되었습니다');
+    toast.success('경력 탭에 새 버전으로 저장되었습니다');
     onOpenChange(false);
   };
 

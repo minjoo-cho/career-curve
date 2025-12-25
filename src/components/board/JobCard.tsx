@@ -122,6 +122,11 @@ export function JobCard({ job, onClick }: JobCardProps) {
           {job.position}
         </Badge>
 
+        {/* Date added */}
+        <p className="text-xs text-muted-foreground mb-2">
+          {new Date(job.createdAt).toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' })} 추가
+        </p>
+
         {/* Footer */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
