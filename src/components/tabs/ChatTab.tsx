@@ -30,10 +30,16 @@ function isLikelyJobUrl(url: string): boolean {
 export function ChatTab({ onNavigateToBoard }: ChatTabProps) {
   const [inputValue, setInputValue] = useState('');
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [pendingUrl, setPendingUrl] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { messages, addMessage, updateMessage, addJobPosting } = useJobStore();
+  const { messages, addMessage, updateMessage, addJobPosting, jobPostings } = useJobStore();
+
+  // Check if URL was already shared
+  const findExistingJobByUrl = (url: string) => {
+    return jobPostings.find((job) => job.sourceUrl === url);
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -149,6 +155,14 @@ export function ChatTab({ onNavigateToBoard }: ChatTabProps) {
     setInputValue('');
 
     if (isLink) {
+      // Check if this URL was already shared
+      const existingJob = findExistingJobByUrl(urlToAnalyze);
+      if (existingJob) {
+        setPendingUrl(urlToAnalyze);
+        setDuplicateDialogOpen(true);
+        return;
+      }
+
       // Check if it looks like a job URL
       if (!isLikelyJobUrl(urlToAnalyze)) {
         // Show confirmation dialog
@@ -185,6 +199,25 @@ export function ChatTab({ onNavigateToBoard }: ChatTabProps) {
       id: Date.now().toString(),
       type: 'assistant',
       content: '취소되었습니다. 채용 공고 링크를 붙여넣어 주세요.',
+      createdAt: new Date(),
+    });
+    setPendingUrl(null);
+  };
+
+  const handleDuplicateConfirm = async () => {
+    setDuplicateDialogOpen(false);
+    if (pendingUrl) {
+      await processJobUrl(pendingUrl);
+      setPendingUrl(null);
+    }
+  };
+
+  const handleDuplicateCancel = () => {
+    setDuplicateDialogOpen(false);
+    addMessage({
+      id: Date.now().toString(),
+      type: 'assistant',
+      content: '추가가 취소되었습니다.',
       createdAt: new Date(),
     });
     setPendingUrl(null);
@@ -280,6 +313,25 @@ export function ChatTab({ onNavigateToBoard }: ChatTabProps) {
           <AlertDialogFooter>
             <AlertDialogCancel onClick={handleCancelJobUrl}>취소</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmJobUrl}>계속 진행</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Duplicate URL Confirmation Dialog */}
+      <AlertDialog open={duplicateDialogOpen} onOpenChange={setDuplicateDialogOpen}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-warning" />
+              이전에 공유한 적 있는 링크입니다
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              이 링크는 이미 보드에 추가된 공고입니다. 다시 추가하시겠습니까?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleDuplicateCancel}>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDuplicateConfirm}>추가</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
