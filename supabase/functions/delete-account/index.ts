@@ -21,15 +21,25 @@ serve(async (req) => {
       );
     }
 
+    // Extract the JWT token from "Bearer <token>"
+    const token = authHeader.replace("Bearer ", "");
+    if (!token) {
+      return new Response(
+        JSON.stringify({ error: "No token provided" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     
-    // Create a client with the user's JWT to get their user ID
-    const supabaseUser = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } }
+    // Create admin client to verify the token and get user
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
     });
 
-    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
+    // Get user from the JWT token
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     
     if (userError || !user) {
       console.error("Error getting user:", userError);
@@ -40,11 +50,6 @@ serve(async (req) => {
     }
 
     console.log("Deleting user:", user.id, user.email);
-
-    // Create admin client to delete the user
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
 
     // Delete user's profile first (if exists)
     const { error: profileError } = await supabaseAdmin
