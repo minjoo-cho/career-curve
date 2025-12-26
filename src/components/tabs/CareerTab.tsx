@@ -993,7 +993,10 @@ function TailoredResumePreviewDialog({
     setIsExporting(true);
     try {
       const format: ResumeFormat = resume.language === 'en' ? 'consulting' : 'narrative';
-      await exportTailoredResumeToDocx(resume, userName, format);
+      const chosenNameDownload = resume.language === 'en'
+        ? (userNames.en || userNames.display || 'Name')
+        : (userNames.ko || userNames.display || '이름');
+      await exportTailoredResumeToDocx(resume, chosenNameDownload, format);
       toast.success('이력서가 다운로드되었습니다');
     } catch (err) {
       console.error('Export error:', err);
