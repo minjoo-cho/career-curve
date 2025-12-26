@@ -158,9 +158,10 @@ const createJobStore = (storageKey: string) =>
             userName: names.ko || names.en || '사용자',
           })),
         setUserName: (name) => set({ userName: name }),
+      }),
       {
         name: storageKey,
-          partialize: (state) => ({
+        partialize: (state) => ({
             jobPostings: state.jobPostings,
             messages: state.messages,
             experiences: state.experiences,
