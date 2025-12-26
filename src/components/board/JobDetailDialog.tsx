@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { JobPosting, JobStatus, STATUS_LABELS, STATUS_COLORS, KeyCompetency, CompanyCriteriaScore } from '@/types/job';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -196,7 +197,14 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
                       size="icon" 
                       className="shrink-0" 
                       onClick={() => {
-                        // Use noopener,noreferrer to avoid LinkedIn blocking
+                        // Check if LinkedIn URL - show copy message instead
+                        const isLinkedIn = job.sourceUrl?.toLowerCase().includes('linkedin.com');
+                        if (isLinkedIn) {
+                          navigator.clipboard.writeText(job.sourceUrl!);
+                          toast.info('LinkedIn은 바로 이동이 어렵습니다. 링크가 복사되었으니, 브라우저에 붙여넣어 이동하세요.');
+                          return;
+                        }
+                        // Use noopener,noreferrer to avoid blocking
                         const link = document.createElement('a');
                         link.href = job.sourceUrl!;
                         link.target = '_blank';
