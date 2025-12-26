@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { LayoutGrid, Table2, Filter, ArrowUpDown, ChevronDown } from 'lucide-react';
+import { LayoutGrid, Table2, Filter, ArrowUpDown, ChevronDown, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useJobStore } from '@/stores/jobStore';
@@ -36,6 +36,7 @@ const STATUS_ORDER: JobStatus[] = [
   'accepted',
   'rejected-docs',
   'rejected-interview',
+  'closed',
 ];
 
 const SORT_LABELS: Record<SortOption, string> = {
@@ -289,6 +290,7 @@ function KanbanView({
   groupedByStatus: Record<JobStatus, JobPosting[]>;
   onDropOnColumn: (jobId: string, newStatus: JobStatus) => void;
 }) {
+  const [showClosed, setShowClosed] = useState(false);
   const [selectedJob, setSelectedJob] = useState<JobPosting | null>(null);
   const [draggedJobId, setDraggedJobId] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<JobStatus | null>(null);
@@ -324,69 +326,123 @@ function KanbanView({
     setDraggedJobId(null);
   };
 
+  // Statuses to show in main view (excluding closed and rejected)
+  const mainStatuses = STATUS_ORDER.filter((status) => !status.startsWith('rejected') && status !== 'closed');
+
   return (
     <>
       <div className="h-full overflow-x-auto scrollbar-hide">
-        <div className="flex gap-4 px-4 h-full min-w-max pb-4">
-          {STATUS_ORDER.filter((status) => !status.startsWith('rejected')).map((status) => (
-            <div 
-              key={status} 
-              className={cn(
-                "w-72 flex-shrink-0 rounded-lg transition-colors",
-                dragOverColumn === status && "bg-primary/10"
-              )}
-              onDragOver={(e) => handleDragOver(e, status)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, status)}
-            >
-              {/* Column Header */}
-              <div className="flex items-center gap-2 mb-3 px-1">
-                <span className={cn(
-                  'w-2 h-2 rounded-full',
-                  status === 'reviewing' && 'bg-muted-foreground',
-                  status === 'applied' && 'bg-info',
-                  status === 'interview' && 'bg-primary',
-                  status === 'offer' && 'bg-success',
-                  status === 'accepted' && 'bg-success',
-                )} />
-                <span className="text-sm font-semibold text-foreground">
-                  {STATUS_LABELS[status]}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {groupedByStatus[status]?.length || 0}
-                </span>
-              </div>
-
-              {/* Cards */}
-              <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-280px)] scrollbar-hide">
-                {groupedByStatus[status]?.map((job) => (
-                  <div
-                    key={job.id}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, job.id)}
-                    onDragEnd={handleDragEnd}
-                    className={cn(
-                      "cursor-grab active:cursor-grabbing",
-                      draggedJobId === job.id && "opacity-50"
-                    )}
-                  >
-                    <JobCard 
-                      job={job} 
-                      onClick={() => setSelectedJob(job)}
-                    />
-                  </div>
-                ))}
-                {groupedByStatus[status]?.length === 0 && (
-                  <div className={cn(
-                    "text-center py-8 text-sm text-muted-foreground rounded-lg border-2 border-dashed",
-                    dragOverColumn === status ? "border-primary" : "border-transparent"
-                  )}>
-                    {dragOverColumn === status ? "여기에 놓기" : "아직 없음"}
-                  </div>
+        <div className="flex flex-col gap-4 px-4 h-full pb-4">
+          {/* Main columns */}
+          <div className="flex gap-4 min-w-max">
+            {mainStatuses.map((status) => (
+              <div 
+                key={status} 
+                className={cn(
+                  "w-72 flex-shrink-0 rounded-lg transition-colors",
+                  dragOverColumn === status && "bg-primary/10"
                 )}
+                onDragOver={(e) => handleDragOver(e, status)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, status)}
+              >
+                {/* Column Header */}
+                <div className="flex items-center gap-2 mb-3 px-1">
+                  <span className={cn(
+                    'w-2 h-2 rounded-full',
+                    status === 'reviewing' && 'bg-muted-foreground',
+                    status === 'applied' && 'bg-info',
+                    status === 'interview' && 'bg-primary',
+                    status === 'offer' && 'bg-success',
+                    status === 'accepted' && 'bg-success',
+                  )} />
+                  <span className="text-sm font-semibold text-foreground">
+                    {STATUS_LABELS[status]}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {groupedByStatus[status]?.length || 0}
+                  </span>
+                </div>
+
+                {/* Cards */}
+                <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-350px)] scrollbar-hide">
+                  {groupedByStatus[status]?.map((job) => (
+                    <div
+                      key={job.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, job.id)}
+                      onDragEnd={handleDragEnd}
+                      className={cn(
+                        "cursor-grab active:cursor-grabbing",
+                        draggedJobId === job.id && "opacity-50"
+                      )}
+                    >
+                      <JobCard 
+                        job={job} 
+                        onClick={() => setSelectedJob(job)}
+                      />
+                    </div>
+                  ))}
+                  {groupedByStatus[status]?.length === 0 && (
+                    <div className={cn(
+                      "text-center py-8 text-sm text-muted-foreground rounded-lg border-2 border-dashed",
+                      dragOverColumn === status ? "border-primary" : "border-transparent"
+                    )}>
+                      {dragOverColumn === status ? "여기에 놓기" : "아직 없음"}
+                    </div>
+                  )}
+                </div>
               </div>
+            ))}
+          </div>
+
+          {/* Closed toggle section */}
+          {(groupedByStatus['closed']?.length > 0) && (
+            <div className="min-w-max">
+              <button
+                onClick={() => setShowClosed(!showClosed)}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showClosed ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                <span>공고 마감</span>
+                <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
+                  {groupedByStatus['closed']?.length || 0}
+                </span>
+              </button>
+              
+              {showClosed && (
+                <div 
+                  className={cn(
+                    "w-72 flex-shrink-0 rounded-lg transition-colors mt-2 ml-3",
+                    dragOverColumn === 'closed' && "bg-primary/10"
+                  )}
+                  onDragOver={(e) => handleDragOver(e, 'closed')}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, 'closed')}
+                >
+                  <div className="space-y-3 overflow-y-auto max-h-[300px] scrollbar-hide">
+                    {groupedByStatus['closed']?.map((job) => (
+                      <div
+                        key={job.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, job.id)}
+                        onDragEnd={handleDragEnd}
+                        className={cn(
+                          "cursor-grab active:cursor-grabbing opacity-70",
+                          draggedJobId === job.id && "opacity-30"
+                        )}
+                      >
+                        <JobCard 
+                          job={job} 
+                          onClick={() => setSelectedJob(job)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          ))}
+          )}
         </div>
       </div>
 

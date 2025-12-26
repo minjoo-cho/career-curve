@@ -6,7 +6,8 @@ export type JobStatus =
   | 'rejected-docs'  // 불합격-서류
   | 'rejected-interview' // 불합격-인터뷰
   | 'offer'          // 오퍼
-  | 'accepted';      // 합격-최종
+  | 'accepted'       // 합격-최종
+  | 'closed';        // 공고 마감
 
 // AI-extracted key competency for job posting (recruiter perspective)
 export interface KeyCompetency {
@@ -140,6 +141,7 @@ export const STATUS_LABELS: Record<JobStatus, string> = {
   'rejected-interview': '불합격-인터뷰',
   'offer': '오퍼',
   'accepted': '합격-최종',
+  'closed': '공고 마감',
 };
 
 // Status colors
@@ -151,6 +153,7 @@ export const STATUS_COLORS: Record<JobStatus, string> = {
   'rejected-interview': 'bg-destructive/10 text-destructive',
   'offer': 'bg-success/10 text-success',
   'accepted': 'bg-success/10 text-success',
+  'closed': 'bg-muted text-muted-foreground',
 };
 
 // Priority labels

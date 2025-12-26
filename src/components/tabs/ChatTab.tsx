@@ -5,6 +5,7 @@ import { useJobStore } from '@/stores/jobStore';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import logoImage from '@/assets/logo.png';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -227,7 +228,10 @@ export function ChatTab({ onNavigateToBoard }: ChatTabProps) {
     <div className="flex flex-col h-full">
       {/* Header */}
       <header className="px-4 pt-safe-top pb-3 border-b border-border bg-background/95 backdrop-blur-sm safe-top">
-        <h1 className="text-xl font-bold text-foreground">채팅</h1>
+        <div className="flex items-center gap-2">
+          <img src={logoImage} alt="Logo" className="w-6 h-6 object-contain" />
+          <h1 className="text-xl font-bold text-foreground">채팅</h1>
+        </div>
         <p className="text-sm text-muted-foreground mt-0.5">
           공고를 넣는 순간, 정리가 시작됩니다
         </p>
