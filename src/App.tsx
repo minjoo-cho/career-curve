@@ -6,9 +6,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { JobStoreProvider, useJobStore } from "@/stores/jobStore";
+import { DataProvider } from "@/contexts/DataContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import Admin from "./pages/Admin";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import ResetPassword from "./pages/ResetPassword";
@@ -16,28 +17,9 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-function AuthStoreSync() {
-  const { user } = useAuth();
-  const { setUserNames } = useJobStore();
-
-  useEffect(() => {
-    if (!user) return;
-
-    const ko = String((user.user_metadata as any)?.name_ko ?? '').trim();
-    const en = String((user.user_metadata as any)?.name_en ?? '').trim();
-    if (!ko && !en) return;
-
-    setUserNames({ ko, en });
-  }, [user, setUserNames]);
-
-  return null;
-}
-
 function AppWithProviders() {
   const { user, isLoading } = useAuth();
 
-  // Wait for auth to be determined before rendering anything that uses storage
-  // This prevents loading wrong user's data during the auth check
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -46,16 +28,8 @@ function AppWithProviders() {
     );
   }
 
-  // Use user.id if logged in, otherwise use a truly anonymous key
-  // CRITICAL: Each user MUST have their own isolated storage
-  const storageKey = user?.id ? `jobflow-storage:${user.id}` : "jobflow-storage:anon";
-
-  // Note: We no longer delete legacy keys to preserve user data across sessions
-  // Each user has isolated storage via their unique storageKey
-
   return (
-    <JobStoreProvider key={storageKey} storageKey={storageKey}>
-      <AuthStoreSync />
+    <DataProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -64,16 +38,16 @@ function AppWithProviders() {
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/admin" element={<Admin />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ProtectedRoute>
         </BrowserRouter>
       </TooltipProvider>
-    </JobStoreProvider>
+    </DataProvider>
   );
 }
 
