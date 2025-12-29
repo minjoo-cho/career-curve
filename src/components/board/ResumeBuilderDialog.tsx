@@ -14,7 +14,7 @@ import {
 import { FileText, CheckCircle2, Loader2, Copy, ArrowRight, Save, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { useJobStore } from '@/stores/jobStore';
+import { useData } from '@/contexts/DataContext';
 
 interface ResumeBuilderDialogProps {
   open: boolean;
@@ -28,9 +28,20 @@ interface ResumeBuilderDialogProps {
 type ResumeFormat = 'consulting';
 
 function detectLanguage(text: string): 'ko' | 'en' {
-  const koreanChars = (text.match(/[가-힣]/g) || []).length;
+  // Count Korean characters (including spaces between Korean text)
+  const koreanChars = (text.match(/[가-힣ㄱ-ㅎㅏ-ㅣ]/g) || []).length;
+  // Count English characters
   const englishChars = (text.match(/[a-zA-Z]/g) || []).length;
-  return koreanChars > englishChars ? 'ko' : 'en';
+  
+  // If there are very few characters of either type, check for specific patterns
+  const totalChars = koreanChars + englishChars;
+  if (totalChars < 10) {
+    return 'ko'; // Default to Korean for very short text
+  }
+  
+  // Use a threshold: if more than 70% is English, treat as English
+  const englishRatio = englishChars / totalChars;
+  return englishRatio > 0.7 ? 'en' : 'ko';
 }
 
 export function ResumeBuilderDialog({
@@ -41,7 +52,7 @@ export function ResumeBuilderDialog({
   experiences,
   onNavigateToCareer,
 }: ResumeBuilderDialogProps) {
-  const [step, setStep] = useState(1); // Now starts at step 1 = experience selection
+  const [step, setStep] = useState(1);
   const [selectedFormat, setSelectedFormat] = useState<ResumeFormat>('consulting');
   const [selectedExperiences, setSelectedExperiences] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -49,7 +60,7 @@ export function ResumeBuilderDialog({
   const [rawAIContent, setRawAIContent] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [lastSavedTailoredResumeId, setLastSavedTailoredResumeId] = useState<string | null>(null);
-  const { addTailoredResume } = useJobStore();
+  const { addTailoredResume } = useData();
 
   const workExperiences = useMemo(() => experiences.filter(e => e.type === 'work'), [experiences]);
   const projectExperiences = useMemo(() => experiences.filter(e => e.type === 'project'), [experiences]);
@@ -87,9 +98,11 @@ export function ResumeBuilderDialog({
   };
 
   const language = useMemo(() => {
-    const textToAnalyze = `${job.title} ${job.summary || ''}`;
+    // Analyze job title, summary, and key competencies for language detection
+    const competencyText = keyCompetencies.map(k => `${k.title} ${k.description}`).join(' ');
+    const textToAnalyze = `${job.title} ${job.summary || ''} ${competencyText}`;
     return detectLanguage(textToAnalyze);
-  }, [job.title, job.summary]);
+  }, [job.title, job.summary, keyCompetencies]);
 
   const [aiFeedback, setAiFeedback] = useState<string | null>(null);
 
