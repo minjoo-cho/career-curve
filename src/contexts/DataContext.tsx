@@ -23,22 +23,22 @@ interface DataContextType {
   updateMessage: (id: string, updates: Partial<ChatMessage>) => Promise<void>;
   // Experiences
   experiences: Experience[];
-  addExperience: (experience: Experience) => Promise<void>;
+  addExperience: (experience: Omit<Experience, 'id'> & { id?: string }) => Promise<string | undefined>;
   updateExperience: (id: string, updates: Partial<Experience>) => Promise<void>;
   removeExperience: (id: string) => Promise<void>;
   // Resumes
   resumes: Resume[];
-  addResume: (resume: Resume) => Promise<void>;
+  addResume: (resume: Omit<Resume, 'id'> & { id?: string }) => Promise<string | undefined>;
   updateResume: (id: string, updates: Partial<Resume>) => Promise<void>;
   removeResume: (id: string) => Promise<void>;
   // Tailored resumes
   tailoredResumes: TailoredResume[];
-  addTailoredResume: (resume: TailoredResume) => Promise<void>;
+  addTailoredResume: (resume: Omit<TailoredResume, 'id'> & { id?: string }) => Promise<string | undefined>;
   updateTailoredResume: (id: string, updates: Partial<TailoredResume>) => Promise<void>;
   removeTailoredResume: (id: string) => Promise<void>;
   // Goals
   currentGoals: CareerGoal[];
-  addGoal: (goal: CareerGoal) => Promise<void>;
+  addGoal: (goal: Omit<CareerGoal, 'id'> & { id?: string }) => Promise<string | undefined>;
   updateGoal: (id: string, updates: Partial<CareerGoal>) => Promise<void>;
   removeGoal: (id: string) => Promise<void>;
   // Subscription

@@ -351,13 +351,12 @@ export function useSupabaseData() {
   };
 
   // Experience operations
-  const addExperience = async (experience: Experience) => {
+  const addExperience = async (experience: Omit<Experience, 'id'> & { id?: string }): Promise<string | undefined> => {
     if (!user) return;
     
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('experiences')
       .insert({
-        id: experience.id,
         user_id: user.id,
         type: experience.type,
         title: experience.title,
@@ -366,7 +365,9 @@ export function useSupabaseData() {
         description: experience.description,
         bullets: experience.bullets,
         used_in_postings: experience.usedInPostings,
-      });
+      })
+      .select()
+      .single();
     
     if (error) {
       console.error('Error adding experience:', error);
@@ -374,7 +375,19 @@ export function useSupabaseData() {
       return;
     }
     
-    setExperiences(prev => [experience, ...prev]);
+    const newExperience: Experience = {
+      id: data.id,
+      type: data.type as 'work' | 'project',
+      title: data.title,
+      company: data.company ?? undefined,
+      period: data.period ?? undefined,
+      description: data.description,
+      bullets: (data.bullets as string[]) || [],
+      usedInPostings: (data.used_in_postings as string[]) || [],
+      createdAt: new Date(data.created_at),
+    };
+    setExperiences(prev => [newExperience, ...prev]);
+    return data.id;
   };
 
   const updateExperience = async (id: string, updates: Partial<Experience>) => {
@@ -421,13 +434,12 @@ export function useSupabaseData() {
   };
 
   // Resume operations
-  const addResume = async (resume: Resume) => {
+  const addResume = async (resume: Omit<Resume, 'id'> & { id?: string }): Promise<string | undefined> => {
     if (!user) return;
     
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('resumes')
       .insert({
-        id: resume.id,
         user_id: user.id,
         file_name: resume.fileName,
         file_url: resume.fileUrl,
@@ -435,7 +447,9 @@ export function useSupabaseData() {
         parse_error: resume.parseError ?? null,
         extracted_text: resume.extractedText ?? null,
         ocr_text: resume.ocrText ?? null,
-      });
+      })
+      .select()
+      .single();
     
     if (error) {
       console.error('Error adding resume:', error);
@@ -443,7 +457,19 @@ export function useSupabaseData() {
       return;
     }
     
-    setResumes(prev => [resume, ...prev]);
+    const newResume: Resume = {
+      id: data.id,
+      fileName: data.file_name,
+      fileUrl: data.file_url,
+      uploadedAt: new Date(data.uploaded_at),
+      parseStatus: data.parse_status as 'pending' | 'success' | 'fail',
+      parseError: data.parse_error ?? undefined,
+      extractedText: data.extracted_text ?? undefined,
+      ocrText: data.ocr_text ?? undefined,
+      parsedAt: data.parsed_at ? new Date(data.parsed_at) : undefined,
+    };
+    setResumes(prev => [newResume, ...prev]);
+    return data.id;
   };
 
   const updateResume = async (id: string, updates: Partial<Resume>) => {
@@ -488,24 +514,23 @@ export function useSupabaseData() {
   };
 
   // Tailored resume operations
-  const addTailoredResume = async (resume: TailoredResume) => {
+  const addTailoredResume = async (resume: Omit<TailoredResume, 'id'> & { id?: string }): Promise<string | undefined> => {
     if (!user) return;
     
-    const insertData = {
-      id: resume.id,
-      user_id: user.id,
-      job_posting_id: resume.jobPostingId,
-      company_name: resume.companyName,
-      job_title: resume.jobTitle,
-      content: resume.content,
-      ai_feedback: resume.aiFeedback ?? null,
-      language: resume.language,
-      format: resume.format,
-    };
-    
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('tailored_resumes')
-      .insert(insertData as any);
+      .insert({
+        user_id: user.id,
+        job_posting_id: resume.jobPostingId,
+        company_name: resume.companyName,
+        job_title: resume.jobTitle,
+        content: resume.content,
+        ai_feedback: resume.aiFeedback ?? null,
+        language: resume.language,
+        format: resume.format,
+      })
+      .select()
+      .single();
     
     if (error) {
       console.error('Error adding tailored resume:', error);
@@ -513,7 +538,20 @@ export function useSupabaseData() {
       return;
     }
     
-    setTailoredResumes(prev => [resume, ...prev]);
+    const newResume: TailoredResume = {
+      id: data.id,
+      jobPostingId: data.job_posting_id,
+      companyName: data.company_name,
+      jobTitle: data.job_title,
+      content: data.content,
+      aiFeedback: data.ai_feedback ?? undefined,
+      language: data.language as 'ko' | 'en',
+      format: data.format as 'consulting' | 'narrative',
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at),
+    };
+    setTailoredResumes(prev => [newResume, ...prev]);
+    return data.id;
   };
 
   const updateTailoredResume = async (id: string, updates: Partial<TailoredResume>) => {
@@ -557,13 +595,12 @@ export function useSupabaseData() {
   };
 
   // Career goal operations
-  const addGoal = async (goal: CareerGoal) => {
+  const addGoal = async (goal: Omit<CareerGoal, 'id'> & { id?: string }): Promise<string | undefined> => {
     if (!user) return;
     
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('career_goals')
       .insert({
-        id: goal.id,
         user_id: user.id,
         type: goal.type,
         reason: goal.reason,
@@ -573,7 +610,9 @@ export function useSupabaseData() {
         company_eval_criteria: goal.companyEvalCriteria,
         start_date: goal.startDate.toISOString(),
         end_date: goal.endDate?.toISOString() ?? null,
-      });
+      })
+      .select()
+      .single();
     
     if (error) {
       console.error('Error adding goal:', error);
@@ -581,7 +620,21 @@ export function useSupabaseData() {
       return;
     }
     
-    setCurrentGoals(prev => [goal, ...prev]);
+    const newGoal: CareerGoal = {
+      id: data.id,
+      type: data.type as 'immediate' | 'short-term' | 'long-term',
+      reason: data.reason,
+      careerPath: data.career_path ?? undefined,
+      result: data.result ?? undefined,
+      searchPeriod: data.search_period ?? undefined,
+      companyEvalCriteria: (data.company_eval_criteria as any[]) || [],
+      startDate: new Date(data.start_date),
+      endDate: data.end_date ? new Date(data.end_date) : undefined,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at),
+    };
+    setCurrentGoals(prev => [newGoal, ...prev]);
+    return data.id;
   };
 
   const updateGoal = async (id: string, updates: Partial<CareerGoal>) => {
