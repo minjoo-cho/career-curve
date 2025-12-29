@@ -131,15 +131,20 @@ export function CareerTab() {
     try {
       const fileUrl = URL.createObjectURL(file);
 
-      const newResume: Resume = {
-        id: Date.now().toString(),
+      // Add resume and get the new ID
+      const newResumeId = await addResume({
         fileName: file.name,
         fileUrl: fileUrl,
         uploadedAt: new Date(),
         parseStatus: 'pending',
-      };
+      });
 
-      addResume(newResume);
+      if (!newResumeId) {
+        toast.error('이력서 추가 중 오류가 발생했습니다');
+        setIsUploading(false);
+        return;
+      }
+
       toast.success('이력서가 업로드되었습니다. 분석 중...');
 
       // 1) PDF 텍스트 추출 시도
@@ -167,13 +172,13 @@ export function CareerTab() {
       }
 
       // 3) (진단) 추출된 텍스트를 Resume에 저장
-      updateResume(newResume.id, {
+      updateResume(newResumeId, {
         extractedText: resumeText?.trim() ? resumeText : undefined,
       });
 
       // 4) 둘 다 실패하면 사용자에게 안내
       if ((!resumeText || resumeText.trim().length < 80) && (!pageImages || pageImages.length === 0)) {
-        updateResume(newResume.id, {
+        updateResume(newResumeId, {
           parseStatus: 'fail',
           parseError: 'PDF 텍스트 추출 0자 + OCR 이미지 생성 실패',
         });
@@ -187,7 +192,7 @@ export function CareerTab() {
         const { data, error } = await supabase.functions.invoke('parse-resume', {
           body: {
             fileName: file.name,
-            resumeId: newResume.id,
+            resumeId: newResumeId,
             resumeText: resumeText,
             pageImages,
           },
@@ -196,7 +201,7 @@ export function CareerTab() {
         if (error) throw error;
 
         // (진단) OCR 텍스트도 저장
-        updateResume(newResume.id, {
+        updateResume(newResumeId, {
           ocrText: typeof data?.ocrText === 'string' && data.ocrText.trim() ? data.ocrText : undefined,
           parsedAt: new Date(),
         });
@@ -227,22 +232,21 @@ export function CareerTab() {
             return !looksLikeMock && hasSignal;
           });
 
-          validExperiences.forEach((exp: any) => {
-            addExperience({
-              id: Date.now().toString() + Math.random(),
+          for (const exp of validExperiences) {
+            await addExperience({
               type: exp.type || 'work',
               title: exp.title,
               company: exp.company,
               period: exp.period || undefined,
               description: exp.description || '',
               bullets: exp.bullets || [],
-              usedInPostings: [`source:resume:${newResume.id}`],
+              usedInPostings: [`source:resume:${newResumeId}`],
               createdAt: new Date(),
             });
-          });
+          }
 
           if (validExperiences.length === 0) {
-            updateResume(newResume.id, {
+            updateResume(newResumeId, {
               parseStatus: 'fail',
               parseError: `경험 0개 (추출텍스트 ${extractedLen}자)`,
             });
@@ -250,10 +254,10 @@ export function CareerTab() {
             return;
           }
 
-          updateResume(newResume.id, { parseStatus: 'success', parseError: undefined });
+          updateResume(newResumeId, { parseStatus: 'success', parseError: undefined });
           toast.success(`이력서 분석 완료! ${validExperiences.length}개의 경험을 추출했습니다.`);
         } else {
-          updateResume(newResume.id, {
+          updateResume(newResumeId, {
             parseStatus: 'fail',
             parseError: `경험 0개 (추출텍스트 ${extractedLen}자)`,
           });
@@ -261,7 +265,7 @@ export function CareerTab() {
         }
       } catch (parseError) {
         console.error('Resume parse error:', parseError);
-        updateResume(newResume.id, { parseStatus: 'fail', parseError: '분석 실패' });
+        updateResume(newResumeId, { parseStatus: 'fail', parseError: '분석 실패' });
         toast.error('이력서 분석에 실패했습니다.');
       }
     } catch (error) {
