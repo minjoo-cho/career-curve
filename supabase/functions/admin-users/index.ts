@@ -55,18 +55,39 @@ serve(async (req) => {
       );
     }
 
-    // Fetch all users from auth.users
-    const { data: { users: authUsers }, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
-    
-    if (usersError) {
-      throw new Error(`Failed to fetch users: ${usersError.message}`);
-    }
-
-    // Create a map of user_id to email
+    // Fetch all users from auth.users with pagination
+    // listUsers returns max 1000 per page, we need to fetch all pages
     const userEmailMap: Record<string, string> = {};
-    for (const user of authUsers || []) {
-      userEmailMap[user.id] = user.email || user.phone || 'N/A';
+    let page = 1;
+    const perPage = 1000;
+    
+    while (true) {
+      console.log(`Fetching users page ${page}...`);
+      const { data: { users: authUsers }, error: usersError } = await supabaseAdmin.auth.admin.listUsers({
+        page,
+        perPage,
+      });
+      
+      if (usersError) {
+        throw new Error(`Failed to fetch users: ${usersError.message}`);
+      }
+
+      console.log(`Page ${page}: fetched ${authUsers?.length || 0} users`);
+      
+      // Add users to map
+      for (const user of authUsers || []) {
+        userEmailMap[user.id] = user.email || user.phone || 'N/A';
+      }
+      
+      // If we got fewer users than perPage, we've reached the last page
+      if (!authUsers || authUsers.length < perPage) {
+        break;
+      }
+      
+      page++;
     }
+    
+    console.log(`Total users fetched: ${Object.keys(userEmailMap).length}`);
 
     return new Response(
       JSON.stringify({ success: true, userEmailMap }),
