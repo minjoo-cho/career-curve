@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { FileText, CheckCircle2, Loader2, Copy, ArrowRight, Save, ExternalLink } from 'lucide-react';
+import { FileText, CheckCircle2, Loader2, Copy, ArrowRight, Save, ExternalLink, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useData } from '@/contexts/DataContext';
@@ -60,6 +60,7 @@ export function ResumeBuilderDialog({
   const [rawAIContent, setRawAIContent] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [lastSavedTailoredResumeId, setLastSavedTailoredResumeId] = useState<string | null>(null);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
   const { addTailoredResume } = useData();
 
   const workExperiences = useMemo(() => experiences.filter(e => e.type === 'work'), [experiences]);
@@ -112,6 +113,8 @@ export function ResumeBuilderDialog({
       return;
     }
 
+    const controller = new AbortController();
+    setAbortController(controller);
     setIsGenerating(true);
     setGeneratedContent(null);
     setAiFeedback(null);
@@ -137,6 +140,11 @@ export function ResumeBuilderDialog({
         },
       });
 
+      // Check if aborted
+      if (controller.signal.aborted) {
+        return;
+      }
+
       if (error) throw new Error(error.message);
       if (!data?.success) throw new Error(data?.error || 'Failed to generate resume');
 
@@ -146,10 +154,23 @@ export function ResumeBuilderDialog({
       setStep(2); // Now step 2 is the result
       toast.success('맞춤 이력서가 생성되었습니다');
     } catch (error) {
+      if (controller.signal.aborted) {
+        toast.info('이력서 생성이 중단되었습니다');
+        return;
+      }
       console.error('Error generating resume:', error);
       toast.error(error instanceof Error ? error.message : '이력서 생성 실패');
     } finally {
       setIsGenerating(false);
+      setAbortController(null);
+    }
+  };
+
+  const handleAbort = () => {
+    if (abortController) {
+      abortController.abort();
+      setIsGenerating(false);
+      setAbortController(null);
     }
   };
 
@@ -299,11 +320,10 @@ export function ResumeBuilderDialog({
   );
 
 
-  // Prevent closing during generation
+  // Allow closing during generation now that we have abort
   const handleOpenChange = (open: boolean) => {
     if (!open && isGenerating) {
-      toast.error('생성 중에는 나갈 수 없습니다. 완료될 때까지 기다려주세요.');
-      return;
+      handleAbort();
     }
     onOpenChange(open);
   };
@@ -334,26 +354,28 @@ export function ResumeBuilderDialog({
             <div className="flex flex-col gap-2">
               {isGenerating && (
                 <div className="bg-warning/10 text-warning text-xs p-2 rounded-lg text-center">
-                  약 15초 소요됩니다. 중간에 나가면 저장되지 않습니다.
+                  약 15초 소요됩니다.
                 </div>
               )}
-              <Button
-                className="w-full"
-                onClick={handleGenerate}
-                disabled={isGenerating || selectedExperiences.length === 0}
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    생성 중...
-                  </>
-                ) : (
-                  <>
-                    맞춤 이력서 생성
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </>
-                )}
-              </Button>
+              {isGenerating ? (
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  onClick={handleAbort}
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  중단하기
+                </Button>
+              ) : (
+                <Button
+                  className="w-full"
+                  onClick={handleGenerate}
+                  disabled={selectedExperiences.length === 0}
+                >
+                  맞춤 이력서 생성
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              )}
             </div>
           )}
 
