@@ -132,16 +132,17 @@ serve(async (req) => {
 ## 핵심 지시사항 (반드시 따를 것)
 당신은 AI 적합도 평가 결과를 기반으로 이력서를 **실제로 수정**해야 합니다:
 
-1. **경험 순서는 시간순으로 유지**: 경력 경험은 최근→과거 순으로 배치합니다 (시간순 변경은 최적화가 아님).
-2. **bullet point 내용 수정/강화**: 
+1. **경력 순서는 시간순으로 유지**: 경력(Work Experience)은 최근→과거 순으로 배치합니다. 순서 변경 불가.
+2. **프로젝트(Selected Projects)만 순서 조정 가능**: 공고와 관련도가 높은 프로젝트를 상단에 배치할 수 있습니다.
+3. **bullet point 내용 수정/강화**: 
    - 원본 bullet을 **반드시 다르게 작성**하세요.
    - 핵심 역량과 관련된 키워드, 수치, 성과를 **추가**하거나 **강조**하세요.
    - 예: "프로젝트 관리" → "5명 팀을 이끌어 3개월 내 프로젝트 완료율 95% 달성"
-3. **약한 역량 보완**: 점수가 낮은 역량(1-2점)에 대해:
+4. **약한 역량 보완**: 점수가 낮은 역량(1-2점)에 대해:
    - 유사 경험에서 전이 가능한 스킬을 **명시적으로 언급**
    - "~을 통해 ~역량을 개발" 형태로 연결 문구 추가
-4. **강한 역량 극대화**: 점수가 높은 역량은 **구체적 숫자와 결과**를 포함
-5. **원본과 동일하면 안 됨**: 피드백에서 언급한 수정사항이 이력서 본문에 **실제로 반영**되어야 합니다.
+5. **강한 역량 극대화**: 점수가 높은 역량은 **구체적 숫자와 결과**를 포함
+6. **원본과 동일하면 안 됨**: 피드백에서 언급한 수정사항이 이력서 본문에 **실제로 반영**되어야 합니다.
 
 중요 규칙:
 - 반드시 아래 마커를 그대로 사용해 출력하세요.
@@ -155,16 +156,20 @@ serve(async (req) => {
 (여기에 이력서 본문만)
 
 AI_FEEDBACK 작성 규칙(엄수):
-- 반드시 아래 2개 섹션으로만 구성하세요.
+- 반드시 아래 3개 섹션으로 구성하세요 (## 종합 의견은 한 번만!):
   1) ## 종합 의견
-  2) ## 세부 수정 의견
-- 종합 의견에는 (중요! 아래 내용만 작성):
-  * 이 공고에 대해 지원자의 역량이 어떻게 보이는지 (강점/약점 분석)
-  * 어떤 점을 보완해야 하는지
-  * 이력서에서 **실제로 어떤 문구를 어떻게 변경했는지** 구체적으로 명시
-  * "핵심 역량을 기준으로 최적화했습니다" 같은 기본 문구 절대 포함하지 말 것
-  * "시간순으로 배치했습니다" 같은 당연한 내용 포함하지 말 것
-- 세부 수정 의견에는: **원문 → 수정본** 형태로 구체적 변경 사항 나열
+  2) ## 역량 분석
+  3) ## 세부 수정 내용
+- "## 종합 의견"은 **절대 중복 출력하지 마세요**. 한 번만 작성합니다.
+- 종합 의견에는:
+  * 이 공고에 대한 지원자 적합도 (전반적인 강점/약점)
+  * 보완이 필요한 부분
+  * 이력서에서 강조할 핵심 포인트
+- 역량 분석에는:
+  * 각 핵심 역량별 지원자 강점/약점 분석
+  * 부족한 역량을 어떻게 보완했는지
+- 세부 수정 내용에는:
+  * **원문 → 수정본** 형태로 구체적 변경 사항 나열
   * 예: "'프로젝트 진행' → '5명 팀을 리드하여 신규 기능 출시, MAU 30% 증가'"
 - 절대 없는 사실을 만들어내지 말 것(경험/성과 과장 금지)
 
@@ -179,17 +184,18 @@ RESUME 작성 규칙:
 ## CRITICAL INSTRUCTIONS (Must Follow)
 You must **actively modify** the resume based on the AI fit evaluation results:
 
-1. **Keep Chronological Order**: Work experiences should remain in reverse chronological order (most recent first). Do NOT claim reordering as optimization.
-2. **Rewrite Bullet Points**: 
+1. **Keep Work Experience in Chronological Order**: Work experiences MUST remain in reverse chronological order (most recent first). This order CANNOT be changed.
+2. **Only Reorder Selected Projects**: You may reorder projects based on relevance to the job posting.
+3. **Rewrite Bullet Points**: 
    - **DO NOT copy original bullets verbatim.** 
    - Add specific metrics, keywords aligned with job requirements, and quantified achievements.
    - Example: "Managed projects" → "Led cross-functional team of 5 to deliver product launch 2 weeks ahead of schedule, increasing user engagement by 40%"
-3. **Weak Competency Compensation**: For low-scoring competencies (1-2 points):
+4. **Weak Competency Compensation**: For low-scoring competencies (1-2 points):
    - Explicitly mention transferable skills from related experiences
    - Add phrases connecting experiences to the weak competency
-4. **Strong Competency Maximization**: Include specific numbers, percentages, and measurable outcomes
-5. **Native English Quality**: Write in fluent, natural English as a native speaker would. Use strong action verbs (Led, Drove, Spearheaded, Orchestrated, etc.)
-6. **IMPORTANT**: The final resume MUST be noticeably different from the original - improved and tailored.
+5. **Strong Competency Maximization**: Include specific numbers, percentages, and measurable outcomes
+6. **Native English Quality**: Write in fluent, natural English as a native speaker would. Use strong action verbs (Led, Drove, Spearheaded, Orchestrated, etc.)
+7. **IMPORTANT**: The final resume MUST be noticeably different from the original - improved and tailored.
 
 CRITICAL RULES:
 - You MUST output using the exact markers below.
@@ -204,16 +210,20 @@ Output format (STRICT):
 (resume body only)
 
 AI_FEEDBACK rules (STRICT):
-- Use exactly these two sections:
+- Use exactly these three sections (## Overall Assessment appears ONLY ONCE!):
   1) ## Overall Assessment
-  2) ## Detailed Revision Notes
-- Overall Assessment (IMPORTANT! Only include):
-  * How the candidate's competencies appear for this specific job (strengths/weaknesses analysis)
-  * What areas need improvement
-  * **Specifically what phrases/bullets you changed and why** - be concrete
-  * Do NOT include generic phrases like "optimized based on key competencies"
-  * Do NOT mention "chronological ordering" as an optimization
-- Detailed Revision Notes: Show **"Original → Revised"** format for each change
+  2) ## Competency Analysis
+  3) ## Detailed Revisions
+- "## Overall Assessment" must appear **ONLY ONCE**. Do not duplicate this heading.
+- Overall Assessment:
+  * Candidate's overall fit for this specific job (general strengths/weaknesses)
+  * Areas needing improvement
+  * Key points to emphasize in the resume
+- Competency Analysis:
+  * Strength/weakness analysis for each key competency
+  * How weak competencies were compensated
+- Detailed Revisions:
+  * Show **"Original → Revised"** format for each change
   * Example: "'Worked on data analysis' → 'Analyzed 50K+ user behavior data points to identify churn patterns, reducing churn rate by 15%'"
 - Never invent facts; no exaggeration
 
