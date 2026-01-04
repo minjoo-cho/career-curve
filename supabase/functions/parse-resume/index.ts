@@ -1,10 +1,19 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Input validation schema
+const requestSchema = z.object({
+  fileName: z.string().min(1).max(500),
+  resumeId: z.string().uuid(),
+  resumeText: z.string().max(500000).optional().nullable(), // Allow large text for PDF content
+  pageImages: z.array(z.string().max(10000000)).max(10).optional(), // Base64 images can be large
+});
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -38,7 +47,23 @@ serve(async (req) => {
 
     console.log('Authenticated user:', user.id);
 
-    const { fileName, resumeId, resumeText, pageImages } = await req.json();
+    // Parse and validate input
+    const rawBody = await req.json();
+    const validationResult = requestSchema.safeParse(rawBody);
+    
+    if (!validationResult.success) {
+      console.error('Validation error:', validationResult.error.issues);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Invalid input data',
+          details: validationResult.error.issues.map(i => `${i.path.join('.')}: ${i.message}`)
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { fileName, resumeId, resumeText, pageImages } = validationResult.data;
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {

@@ -1,10 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Input validation schema
+const requestSchema = z.object({
+  url: z.string().min(1).max(2000),
+});
 
 // Allowlisted job board domains for URL validation
 const ALLOWED_DOMAINS = [
@@ -97,7 +103,7 @@ function validateUrl(urlString: string): { valid: boolean; error?: string; url?:
       };
     }
     
-    // URL length check
+    // URL length check (already validated by Zod, but double-check)
     if (formattedUrl.length > 2000) {
       return { valid: false, error: 'URL이 너무 깁니다.' };
     }
@@ -140,14 +146,23 @@ serve(async (req) => {
 
     console.log('Authenticated user:', user.id);
 
-    const { url } = await req.json();
+    // Parse and validate input
+    const rawBody = await req.json();
+    const validationResult = requestSchema.safeParse(rawBody);
     
-    if (!url) {
+    if (!validationResult.success) {
+      console.error('Validation error:', validationResult.error.issues);
       return new Response(
-        JSON.stringify({ success: false, error: 'URL is required' }),
+        JSON.stringify({ 
+          success: false, 
+          error: 'Invalid input data',
+          details: validationResult.error.issues.map(i => `${i.path.join('.')}: ${i.message}`)
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const { url } = validationResult.data;
 
     // Validate URL to prevent SSRF attacks
     const urlValidation = validateUrl(url);

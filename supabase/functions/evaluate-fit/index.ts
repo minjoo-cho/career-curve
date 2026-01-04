@@ -1,10 +1,35 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Input validation schemas
+const keyCompetencySchema = z.object({
+  title: z.string().min(1).max(200),
+  description: z.string().max(1000).default(''),
+  score: z.number().min(1).max(5).optional(),
+  evaluation: z.string().max(2000).optional(),
+});
+
+const experienceSchema = z.object({
+  id: z.string().max(100).optional(),
+  type: z.enum(['work', 'project']),
+  title: z.string().min(1).max(300),
+  company: z.string().max(200).optional(),
+  period: z.string().max(100).optional(),
+  description: z.string().max(5000).default(''),
+  bullets: z.array(z.string().max(1000)).max(20).default([]),
+});
+
+const requestSchema = z.object({
+  keyCompetencies: z.array(keyCompetencySchema).min(1).max(10),
+  experiences: z.array(experienceSchema).min(1).max(50),
+  minExperience: z.string().max(200).optional().nullable(),
+});
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -38,18 +63,27 @@ serve(async (req) => {
 
     console.log('Authenticated user:', user.id);
 
-    const { keyCompetencies, experiences, minExperience } = await req.json();
+    // Parse and validate input
+    const rawBody = await req.json();
+    const validationResult = requestSchema.safeParse(rawBody);
+    
+    if (!validationResult.success) {
+      console.error('Validation error:', validationResult.error.issues);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Invalid input data',
+          details: validationResult.error.issues.map(i => `${i.path.join('.')}: ${i.message}`)
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { keyCompetencies, experiences, minExperience } = validationResult.data;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
-    }
-
-    if (!keyCompetencies?.length || !experiences?.length) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Missing competencies or experiences' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     }
 
     const experiencesSummary = experiences.map((exp: any) => 

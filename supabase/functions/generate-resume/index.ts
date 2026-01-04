@@ -1,46 +1,50 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface Experience {
-  id: string;
-  type: "work" | "project";
-  title: string;
-  company?: string;
-  period?: string;
-  description: string;
-  bullets: string[];
-}
+// Input validation schemas
+const experienceSchema = z.object({
+  id: z.string().max(100),
+  type: z.enum(["work", "project"]),
+  title: z.string().min(1).max(300),
+  company: z.string().max(200).optional(),
+  period: z.string().max(100).optional(),
+  description: z.string().max(5000),
+  bullets: z.array(z.string().max(1000)).max(20),
+});
 
-interface KeyCompetency {
-  title: string;
-  description: string;
-  score?: number; // User's self-assessment 1-5
-  evaluation?: string; // AI evaluation of user's fit
-}
+const keyCompetencySchema = z.object({
+  title: z.string().min(1).max(200),
+  description: z.string().max(1000),
+  score: z.number().min(1).max(5).optional(),
+  evaluation: z.string().max(2000).optional(),
+});
 
-interface MinimumRequirementsCheck {
-  experienceMet: '충족' | '미충족' | '판단 불가';
-  reason: string;
-}
+const minimumRequirementsCheckSchema = z.object({
+  experienceMet: z.enum(['충족', '미충족', '판단 불가']),
+  reason: z.string().max(500),
+});
 
+const requestSchema = z.object({
+  jobTitle: z.string().min(1).max(300),
+  companyName: z.string().min(1).max(200),
+  jobSummary: z.string().max(5000),
+  keyCompetencies: z.array(keyCompetencySchema).min(1).max(10),
+  experiences: z.array(experienceSchema).min(1).max(50),
+  language: z.enum(["ko", "en"]),
+  format: z.enum(["consulting", "narrative"]).optional(),
+  minimumRequirementsCheck: minimumRequirementsCheckSchema.optional(),
+});
+
+type Experience = z.infer<typeof experienceSchema>;
+type KeyCompetency = z.infer<typeof keyCompetencySchema>;
+type MinimumRequirementsCheck = z.infer<typeof minimumRequirementsCheckSchema>;
 type ResumeFormat = "consulting" | "narrative";
-
-interface RequestBody {
-  jobTitle: string;
-  companyName: string;
-  jobSummary: string;
-  keyCompetencies: KeyCompetency[];
-  experiences: Experience[];
-  language: "ko" | "en";
-  format?: ResumeFormat;
-  // AI 적합도 평가 결과
-  minimumRequirementsCheck?: MinimumRequirementsCheck;
-}
 
 function splitAiFeedback(raw: string) {
   // Preferred markers
@@ -109,6 +113,21 @@ serve(async (req) => {
 
     console.log('Authenticated user:', user.id);
 
+    // Parse and validate input
+    const rawBody = await req.json();
+    const validationResult = requestSchema.safeParse(rawBody);
+    
+    if (!validationResult.success) {
+      console.error('Validation error:', validationResult.error.issues);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid input data',
+          details: validationResult.error.issues.map(i => `${i.path.join('.')}: ${i.message}`)
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const {
       jobTitle,
       companyName,
@@ -118,7 +137,7 @@ serve(async (req) => {
       language,
       format = language === "en" ? "consulting" : "narrative",
       minimumRequirementsCheck,
-    }: RequestBody = await req.json();
+    } = validationResult.data;
 
     console.log("Generating tailored resume for:", companyName, jobTitle);
     console.log("Language:", language, "Format:", format);
