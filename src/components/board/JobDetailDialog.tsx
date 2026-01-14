@@ -44,6 +44,8 @@ import {
   CheckCircle2,
   XCircle,
   HelpCircle,
+  Sparkles,
+  Lock,
 } from 'lucide-react';
 import { ResumeBuilderDialog } from './ResumeBuilderDialog';
 import { FitEvaluationButton } from './FitEvaluationButton';
@@ -58,21 +60,19 @@ interface JobDetailDialogProps {
 
 export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }: JobDetailDialogProps) {
   const { updateJobPosting, currentGoals, experiences, jobPostings } = useData();
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isSummaryOpen, setIsSummaryOpen] = useState(true);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [isResumeBuilderOpen, setIsResumeBuilderOpen] = useState(false);
   const [editingEvaluation, setEditingEvaluation] = useState<number | null>(null);
   const [editEvalText, setEditEvalText] = useState('');
   
   // Initialize company criteria scores from goals or job
-  // Merge criteria from all active goals (no endDate), deduped by name
   const [companyCriteriaScores, setCompanyCriteriaScores] = useState<CompanyCriteriaScore[]>(() => {
     if (job.companyCriteriaScores?.length) {
       return job.companyCriteriaScores;
     }
     const activeGoals = currentGoals.filter((g) => !g.endDate);
     if (activeGoals.length === 0) return [];
-    // Merge criteria from all goals, dedup by name (take first occurrence)
     const criteriaMap = new Map<string, { name: string; weight: number; description?: string }>();
     activeGoals.forEach((goal) => {
       goal.companyEvalCriteria.forEach((c) => {
@@ -103,9 +103,13 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
     ? Math.round(keyCompetencyScores.reduce((sum, c) => sum + (c.score || 0), 0) / keyCompetencyScores.filter(c => c.score).length)
     : 0;
 
+  // Step completion checks
+  const isStep1Complete = fitAvg > 0;
+  const isStep2Complete = companyAvg > 0;
+  const isStep3Enabled = isStep1Complete && isStep2Complete && keyCompetencyScores.length > 0;
+
   // Calculate relative priority based on all job postings
   const calculateRelativePriority = (compScore: number, fitScoreVal: number): number => {
-    // Get all job postings with scores
     const allScores = jobPostings
       .filter(j => (j.companyScore && j.companyScore > 0) || (j.fitScore && j.fitScore > 0))
       .map(j => {
@@ -116,17 +120,14 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
       })
       .filter(s => s > 0);
 
-    // Calculate this job's average
     const count = (compScore > 0 ? 1 : 0) + (fitScoreVal > 0 ? 1 : 0);
     const thisScore = count > 0 ? (compScore + fitScoreVal) / count : 0;
     
-    if (thisScore === 0 || allScores.length === 0) return 3; // Default to middle
+    if (thisScore === 0 || allScores.length === 0) return 3;
 
-    // Sort all scores (including this one) descending
     const allWithThis = [...allScores.filter(s => s !== thisScore), thisScore].sort((a, b) => b - a);
     
     if (allWithThis.length === 1) {
-      // Only one job - assign based on absolute score
       if (thisScore >= 4) return 1;
       if (thisScore >= 3) return 2;
       if (thisScore >= 2) return 3;
@@ -134,12 +135,8 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
       return 5;
     }
 
-    // Find this job's rank (0-indexed)
     const rank = allWithThis.indexOf(thisScore);
     const totalJobs = allWithThis.length;
-
-    // Distribute into 5 priority buckets relatively
-    // Priority 1: top 20%, Priority 2: 20-40%, etc.
     const percentile = rank / totalJobs;
     
     if (percentile < 0.2) return 1;
@@ -222,7 +219,6 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
         <button 
           key={i} 
           onClick={() => {
-            // Allow setting to 0 by clicking the same star again
             if (allowZero && value === i) {
               onChange(0);
             } else {
@@ -252,7 +248,8 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md max-h-[85vh] p-0 rounded-2xl overflow-hidden">
           <ScrollArea className="max-h-[85vh]">
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-5">
+              {/* Header: Company & Title */}
               <DialogHeader className="space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
@@ -265,14 +262,12 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
                       size="icon" 
                       className="shrink-0" 
                       onClick={() => {
-                        // Check if LinkedIn URL - show copy message instead
                         const isLinkedIn = job.sourceUrl?.toLowerCase().includes('linkedin.com');
                         if (isLinkedIn) {
                           navigator.clipboard.writeText(job.sourceUrl!);
                           toast.info('LinkedIn은 바로 이동이 어렵습니다. 링크가 복사되었으니, 브라우저에 붙여넣어 이동하세요.');
                           return;
                         }
-                        // Use noopener,noreferrer to avoid blocking
                         const link = document.createElement('a');
                         link.href = job.sourceUrl!;
                         link.target = '_blank';
@@ -284,30 +279,142 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
                     </Button>
                   )}
                 </div>
-                
-                <div className="pt-2">
-                  <Select value={job.status} onValueChange={(v) => handleStatusChange(v as JobStatus)}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {/* Status order: 지원검토 → 서류지원 → 인터뷰 → 오퍼 → 불합격-서류 → 불합격-인터뷰 → 합격-최종 → 공고마감 */}
-                      {(['reviewing', 'applied', 'interview', 'offer', 'rejected-docs', 'rejected-interview', 'accepted', 'closed'] as JobStatus[]).map((key) => (
-                        <SelectItem key={key} value={key}>
-                          <Badge className={cn('text-xs', STATUS_COLORS[key])}>{STATUS_LABELS[key]}</Badge>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               </DialogHeader>
 
-              {/* Priority Section */}
-              <div className="bg-secondary/50 rounded-xl p-4 space-y-4">
+              {/* AI Summary & Job Info - Collapsible at top */}
+              <Collapsible open={isSummaryOpen} onOpenChange={setIsSummaryOpen}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-between px-0 h-auto py-1">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium text-muted-foreground">AI 분석 요약</span>
+                    </div>
+                    <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', isSummaryOpen && 'rotate-180')} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-3 pt-3">
+                  {/* AI Summary */}
+                  {job.summary && (
+                    <div className="bg-accent/50 rounded-lg p-3">
+                      <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{job.summary}</p>
+                    </div>
+                  )}
+
+                  {/* Minimum Requirements Check */}
+                  {minimumRequirementsCheck && (
+                    <div className={cn(
+                      "rounded-lg p-3 flex items-start gap-3 border",
+                      minimumRequirementsCheck.experienceMet === '충족' 
+                        ? "bg-success/10 border-success/20" 
+                        : minimumRequirementsCheck.experienceMet === '미충족'
+                        ? "bg-destructive/10 border-destructive/20"
+                        : "bg-warning/10 border-warning/20"
+                    )}>
+                      {minimumRequirementsCheck.experienceMet === '충족' ? (
+                        <CheckCircle2 className="w-4 h-4 text-success shrink-0 mt-0.5" />
+                      ) : minimumRequirementsCheck.experienceMet === '미충족' ? (
+                        <XCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                      ) : (
+                        <HelpCircle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+                      )}
+                      <div>
+                        <p className={cn(
+                          "text-xs font-semibold",
+                          minimumRequirementsCheck.experienceMet === '충족' ? "text-success" :
+                          minimumRequirementsCheck.experienceMet === '미충족' ? "text-destructive" : "text-warning"
+                        )}>
+                          최소 경력 조건: {minimumRequirementsCheck.experienceMet}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{minimumRequirementsCheck.reason}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Job Info Grid */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <InfoRowCompact 
+                      icon={<Briefcase className="w-3 h-3" />} 
+                      label="포지션" 
+                      value={job.position} 
+                      field="position"
+                      editingField={editingField}
+                      setEditingField={setEditingField}
+                      onSave={(v) => handleFieldUpdate('position', v)}
+                    />
+                    <InfoRowCompact 
+                      icon={<Calendar className="w-3 h-3" />} 
+                      label="최소 경력" 
+                      value={getDisplayValue(job.minExperience)} 
+                      field="minExperience"
+                      editingField={editingField}
+                      setEditingField={setEditingField}
+                      onSave={(v) => handleFieldUpdate('minExperience', v)}
+                      isUnconfirmed={!job.minExperience}
+                    />
+                    <InfoRowCompact 
+                      icon={<Building2 className="w-3 h-3" />} 
+                      label="근무 형태" 
+                      value={getDisplayValue(job.workType)} 
+                      field="workType"
+                      editingField={editingField}
+                      setEditingField={setEditingField}
+                      onSave={(v) => handleFieldUpdate('workType', v)}
+                      isUnconfirmed={!job.workType}
+                    />
+                    <InfoRowCompact 
+                      icon={<MapPin className="w-3 h-3" />} 
+                      label="위치" 
+                      value={getDisplayValue(job.location)} 
+                      field="location"
+                      editingField={editingField}
+                      setEditingField={setEditingField}
+                      onSave={(v) => handleFieldUpdate('location', v)}
+                      isUnconfirmed={!job.location}
+                    />
+                    <InfoRowCompact 
+                      icon={<Globe className="w-3 h-3" />} 
+                      label="비자 지원" 
+                      value={job.visaSponsorship === undefined || job.visaSponsorship === null ? '확인 불가' : job.visaSponsorship ? '가능' : '불가'} 
+                      field="visaSponsorship"
+                      editingField={editingField}
+                      setEditingField={setEditingField}
+                      onSave={(v) => handleFieldUpdate('visaSponsorship', v === '가능')}
+                      isUnconfirmed={job.visaSponsorship === undefined || job.visaSponsorship === null}
+                    />
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* Status Selection */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">지원 상태</Label>
+                <Select value={job.status} onValueChange={(v) => handleStatusChange(v as JobStatus)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(['reviewing', 'applied', 'interview', 'offer', 'rejected-docs', 'rejected-interview', 'accepted', 'closed'] as JobStatus[]).map((key) => (
+                      <SelectItem key={key} value={key}>
+                        <Badge className={cn('text-xs', STATUS_COLORS[key])}>{STATUS_LABELS[key]}</Badge>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Priority Section - AI Auto with indicator */}
+              <div className="bg-secondary/50 rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-foreground">우선순위</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-foreground">우선순위</h3>
+                    <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0 h-5">
+                      <Sparkles className="w-3 h-3" />
+                      AI 자동
+                    </Badge>
+                  </div>
                   <Badge variant="outline" className="text-sm font-bold">#{job.priority}</Badge>
                 </div>
+                <p className="text-xs text-muted-foreground">아래 평가 결과에 따라 자동 계산됩니다. 직접 조정도 가능합니다.</p>
                 
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((p) => (
@@ -325,283 +432,234 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
 
                 <div className="grid grid-cols-2 gap-4 pt-2">
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">회사 매력도</Label>
+                    <Label className="text-xs text-muted-foreground">핵심 역량 적합도</Label>
                     <div className="flex items-center gap-2">
-                      {companyAvg > 0 && <span className="text-lg font-bold text-primary">{companyAvg}</span>}
+                      {fitAvg > 0 && <span className="text-lg font-bold text-primary">{fitAvg}</span>}
+                      {fitAvg === 0 && <span className="text-lg font-bold text-muted-foreground">-</span>}
                       <span className="text-xs text-muted-foreground">/ 5</span>
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">내 적합도</Label>
+                    <Label className="text-xs text-muted-foreground">회사 매력도</Label>
                     <div className="flex items-center gap-2">
-                      {fitAvg > 0 && <span className="text-lg font-bold text-primary">{fitAvg}</span>}
+                      {companyAvg > 0 && <span className="text-lg font-bold text-primary">{companyAvg}</span>}
+                      {companyAvg === 0 && <span className="text-lg font-bold text-muted-foreground">-</span>}
                       <span className="text-xs text-muted-foreground">/ 5</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {job.summary && (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-semibold text-foreground">AI 요약</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed bg-accent/50 rounded-lg p-3 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{job.summary}</p>
-                </div>
-              )}
-
-              {/* Minimum Requirements Check - 최소 조건 충족 여부 */}
-              {minimumRequirementsCheck && (
-                <div className={cn(
-                  "rounded-lg p-3 flex items-start gap-3 border",
-                  minimumRequirementsCheck.experienceMet === '충족' 
-                    ? "bg-success/10 border-success/20" 
-                    : minimumRequirementsCheck.experienceMet === '미충족'
-                    ? "bg-destructive/10 border-destructive/20"
-                    : "bg-warning/10 border-warning/20"
-                )}>
-                  {minimumRequirementsCheck.experienceMet === '충족' ? (
-                    <CheckCircle2 className="w-5 h-5 text-success shrink-0 mt-0.5" />
-                  ) : minimumRequirementsCheck.experienceMet === '미충족' ? (
-                    <XCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
-                  ) : (
-                    <HelpCircle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
-                  )}
-                  <div>
-                    <p className={cn(
-                      "text-sm font-semibold",
-                      minimumRequirementsCheck.experienceMet === '충족' ? "text-success" :
-                      minimumRequirementsCheck.experienceMet === '미충족' ? "text-destructive" : "text-warning"
-                    )}>
-                      최소 경력 조건: {minimumRequirementsCheck.experienceMet}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">{minimumRequirementsCheck.reason}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Key Competencies from AI - with scoring and AI evaluation */}
-              {keyCompetencyScores.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-foreground">핵심 역량 (채용담당자 관점)</h3>
-                  </div>
-
-                  {/* 종합 피드백 - 평가 결과가 있을 때만 표시 */}
-                  {fitAvg > 0 && (
-                    <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
-                      <h4 className="text-xs font-semibold text-primary mb-1">종합 피드백</h4>
-                      <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
-                        {fitAvg >= 4 ? (
-                          <>적합한 경험을 보유하고 있습니다. 핵심 역량과 잘 맞는 경험을 강조하여 지원하시면 좋겠습니다.</>
-                        ) : fitAvg >= 3 ? (
-                          <>일부 역량에서 적합한 경험이 있습니다. 부족한 역량은 관련 프로젝트나 학습 경험으로 보완하여 어필하세요.</>
-                        ) : (
-                          <>핵심 역량과의 매칭이 다소 부족합니다. 지원 시 전이 가능한 기술이나 빠른 학습 능력을 강조해 보세요.</>
-                        )}
-                      </p>
-                    </div>
-                  )}
-
-                  <p className="text-xs text-muted-foreground">AI가 추출한 5가지 핵심 역량입니다. 아래 버튼으로 내 경험 기반 적합도를 자동 평가하거나, 직접 점수를 입력하세요.</p>
-                  
-                  {/* AI Evaluation Button */}
-                  <FitEvaluationButton
-                    keyCompetencies={keyCompetencyScores}
-                    experiences={experiences}
-                    minExperience={job.minExperience}
-                    onEvaluated={handleAIEvaluated}
-                  />
-
-                  {keyCompetencyScores.map((comp, idx) => (
-                    <Collapsible key={idx}>
-                      <div className="bg-secondary/30 rounded-lg p-3 space-y-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium break-words [overflow-wrap:anywhere]">{comp.title}</p>
-                            <p className="text-xs text-muted-foreground break-words [overflow-wrap:anywhere]">{comp.description}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">나의 역량:</span>
-                          {renderStarRating(comp.score || 0, (v) => handleKeyCompetencyScoreChange(idx, v), 'sm')}
-                        </div>
-                        {/* AI Evaluation Toggle */}
-                        {comp.evaluation && (
-                          <CollapsibleTrigger asChild>
-                            <Button variant="ghost" size="sm" className="w-full justify-between text-xs text-muted-foreground h-7 px-2">
-                              <span>AI 평가 보기</span>
-                              <ChevronDown className="w-3 h-3" />
-                            </Button>
-                          </CollapsibleTrigger>
-                        )}
-                        <CollapsibleContent>
-                          {comp.evaluation && editingEvaluation !== idx && (
-                            <div className="bg-background/50 rounded p-2 mt-1">
-                              <div className="flex items-start justify-between gap-2">
-                                <p className="text-xs text-muted-foreground italic flex-1 break-words [overflow-wrap:anywhere]">{comp.evaluation}</p>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="w-6 h-6 shrink-0"
-                                  onClick={() => {
-                                    setEditingEvaluation(idx);
-                                    setEditEvalText(comp.evaluation || '');
-                                  }}
-                                >
-                                  <Edit2 className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                          {editingEvaluation === idx && (
-                            <div className="mt-2 space-y-2">
-                              <Textarea
-                                value={editEvalText}
-                                onChange={(e) => setEditEvalText(e.target.value)}
-                                className="text-xs min-h-[60px]"
-                                placeholder="평가 의견을 수정하세요..."
-                              />
-                              <div className="flex gap-2 justify-end">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setEditingEvaluation(null);
-                                    setEditEvalText('');
-                                  }}
-                                >
-                                  <X className="w-3 h-3 mr-1" />
-                                  취소
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleEvaluationUpdate(idx, editEvalText)}
-                                >
-                                  <Check className="w-3 h-3 mr-1" />
-                                  저장
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </CollapsibleContent>
-                      </div>
-                    </Collapsible>
-                  ))}
-                </div>
-              )}
-
-              {keyCompetencyScores.length === 0 && (
-                <div className="bg-warning/10 border border-warning/20 rounded-lg p-3 flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-warning">핵심 역량 분석 필요</p>
-                    <p className="text-xs text-muted-foreground">새 공고를 등록하면 AI가 자동으로 5가지 핵심 역량을 추출합니다.</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Auto-extracted Fields with Evidence */}
+              {/* Step 1: 핵심 역량 적합도 평가 */}
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">공고 정보</h3>
-                <div className="grid gap-3">
-                  <InfoRowWithEvidence 
-                    icon={<Briefcase className="w-4 h-4" />} 
-                    label="포지션" 
-                    value={job.position} 
-                    field="position" 
-                    editingField={editingField} 
-                    setEditingField={setEditingField} 
-                    onSave={(v) => handleFieldUpdate('position', v)} 
-                  />
-                  <InfoRowWithEvidence 
-                    icon={<Calendar className="w-4 h-4" />} 
-                    label="최소 경력" 
-                    value={getDisplayValue(job.minExperience)} 
-                    evidence={job.minExperienceEvidence}
-                    field="minExperience" 
-                    editingField={editingField} 
-                    setEditingField={setEditingField} 
-                    onSave={(v) => handleFieldUpdate('minExperience', v)} 
-                    isUnconfirmed={!job.minExperience}
-                  />
-                  <InfoRowWithEvidence 
-                    icon={<Building2 className="w-4 h-4" />} 
-                    label="근무 형태" 
-                    value={getDisplayValue(job.workType)} 
-                    evidence={job.workTypeEvidence}
-                    field="workType" 
-                    editingField={editingField} 
-                    setEditingField={setEditingField} 
-                    onSave={(v) => handleFieldUpdate('workType', v)} 
-                    isUnconfirmed={!job.workType}
-                  />
-                  <InfoRowWithEvidence 
-                    icon={<MapPin className="w-4 h-4" />} 
-                    label="위치" 
-                    value={getDisplayValue(job.location)} 
-                    evidence={job.locationEvidence}
-                    field="location" 
-                    editingField={editingField} 
-                    setEditingField={setEditingField} 
-                    onSave={(v) => handleFieldUpdate('location', v)} 
-                    isUnconfirmed={!job.location}
-                  />
-                  <InfoRowWithEvidence 
-                    icon={<Globe className="w-4 h-4" />} 
-                    label="비자 지원" 
-                    value={job.visaSponsorship === undefined || job.visaSponsorship === null ? '확인 불가' : job.visaSponsorship ? '가능' : '불가'} 
-                    evidence={job.visaSponsorshipEvidence}
-                    field="visaSponsorship" 
-                    editingField={editingField} 
-                    setEditingField={setEditingField} 
-                    onSave={(v) => handleFieldUpdate('visaSponsorship', v === '가능')} 
-                    isUnconfirmed={job.visaSponsorship === undefined || job.visaSponsorship === null}
-                  />
+                <div className="flex items-center gap-2">
+                  <div className={cn(
+                    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
+                    isStep1Complete ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                  )}>
+                    {isStep1Complete ? <Check className="w-3 h-3" /> : "1"}
+                  </div>
+                  <h3 className="text-sm font-semibold">Step 1. 핵심 역량 적합도 평가</h3>
+                  <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0 h-5">
+                    <Sparkles className="w-3 h-3" />
+                    AI 자동
+                  </Badge>
                 </div>
+
+                {keyCompetencyScores.length > 0 ? (
+                  <div className="space-y-3 pl-8">
+                    {/* 종합 피드백 */}
+                    {fitAvg > 0 && (
+                      <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
+                        <h4 className="text-xs font-semibold text-primary mb-1">종합 피드백</h4>
+                        <p className="text-xs text-foreground leading-relaxed">
+                          {fitAvg >= 4 ? (
+                            <>적합한 경험을 보유하고 있습니다. 핵심 역량과 잘 맞는 경험을 강조하여 지원하세요.</>
+                          ) : fitAvg >= 3 ? (
+                            <>일부 역량에서 적합한 경험이 있습니다. 부족한 역량은 관련 경험으로 보완하세요.</>
+                          ) : (
+                            <>핵심 역량과의 매칭이 다소 부족합니다. 전이 가능한 기술을 강조해 보세요.</>
+                          )}
+                        </p>
+                      </div>
+                    )}
+
+                    <p className="text-xs text-muted-foreground">AI가 추출한 핵심 역량입니다. 버튼으로 자동 평가하거나 직접 점수를 입력하세요.</p>
+                    
+                    <FitEvaluationButton
+                      keyCompetencies={keyCompetencyScores}
+                      experiences={experiences}
+                      minExperience={job.minExperience}
+                      onEvaluated={handleAIEvaluated}
+                    />
+
+                    {keyCompetencyScores.map((comp, idx) => (
+                      <Collapsible key={idx}>
+                        <div className="bg-secondary/30 rounded-lg p-3 space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium break-words [overflow-wrap:anywhere]">{comp.title}</p>
+                              <p className="text-xs text-muted-foreground break-words [overflow-wrap:anywhere]">{comp.description}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">나의 역량:</span>
+                            {renderStarRating(comp.score || 0, (v) => handleKeyCompetencyScoreChange(idx, v), 'sm')}
+                          </div>
+                          {comp.evaluation && (
+                            <CollapsibleTrigger asChild>
+                              <Button variant="ghost" size="sm" className="w-full justify-between text-xs text-muted-foreground h-7 px-2">
+                                <span>AI 평가 보기</span>
+                                <ChevronDown className="w-3 h-3" />
+                              </Button>
+                            </CollapsibleTrigger>
+                          )}
+                          <CollapsibleContent>
+                            {comp.evaluation && editingEvaluation !== idx && (
+                              <div className="bg-background/50 rounded p-2 mt-1">
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="text-xs text-muted-foreground italic flex-1 break-words [overflow-wrap:anywhere]">{comp.evaluation}</p>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="w-6 h-6 shrink-0"
+                                    onClick={() => {
+                                      setEditingEvaluation(idx);
+                                      setEditEvalText(comp.evaluation || '');
+                                    }}
+                                  >
+                                    <Edit2 className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                            {editingEvaluation === idx && (
+                              <div className="mt-2 space-y-2">
+                                <Textarea
+                                  value={editEvalText}
+                                  onChange={(e) => setEditEvalText(e.target.value)}
+                                  className="text-xs min-h-[60px]"
+                                  placeholder="평가 의견을 수정하세요..."
+                                />
+                                <div className="flex gap-2 justify-end">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditingEvaluation(null);
+                                      setEditEvalText('');
+                                    }}
+                                  >
+                                    <X className="w-3 h-3 mr-1" />
+                                    취소
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleEvaluationUpdate(idx, editEvalText)}
+                                  >
+                                    <Check className="w-3 h-3 mr-1" />
+                                    저장
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </CollapsibleContent>
+                        </div>
+                      </Collapsible>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-warning/10 border border-warning/20 rounded-lg p-3 flex items-start gap-2 ml-8">
+                    <AlertCircle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-warning">핵심 역량 분석 필요</p>
+                      <p className="text-xs text-muted-foreground">새 공고를 등록하면 AI가 자동으로 핵심 역량을 추출합니다.</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Detailed Company Scoring */}
-              <Collapsible open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-between px-0">
-                    <span className="font-semibold">회사 평가하기 (자세히보기)</span>
-                    <ChevronDown className={cn('w-4 h-4 transition-transform', isDetailOpen && 'rotate-180')} />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-3 pt-4">
-                  {companyCriteriaScores.length === 0 ? (
-                    <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 text-center">
-                      <p className="text-sm font-medium text-warning">회사 평가 기준 없음</p>
-                      <p className="text-xs text-muted-foreground mt-1">이직 목표를 먼저 수립해주세요.</p>
-                    </div>
+              {/* Step 2: 회사 매력도 평가 */}
+              <div className={cn("space-y-3", !isStep1Complete && "opacity-60")}>
+                <div className="flex items-center gap-2">
+                  <div className={cn(
+                    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
+                    isStep2Complete ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                  )}>
+                    {isStep2Complete ? <Check className="w-3 h-3" /> : "2"}
+                  </div>
+                  <h3 className="text-sm font-semibold">Step 2. 회사 매력도 평가</h3>
+                  {!isStep1Complete && <Lock className="w-3 h-3 text-muted-foreground" />}
+                </div>
+
+                {isStep1Complete ? (
+                  <div className="space-y-3 pl-8">
+                    {companyCriteriaScores.length === 0 ? (
+                      <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 text-center">
+                        <p className="text-sm font-medium text-warning">회사 평가 기준 없음</p>
+                        <p className="text-xs text-muted-foreground mt-1">목표 탭에서 평가 기준을 먼저 설정해주세요.</p>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-xs text-muted-foreground">목표 탭에서 설정한 기준으로 회사를 평가하세요. 같은 별을 다시 누르면 0점으로 초기화됩니다.</p>
+                        {companyCriteriaScores.map((criteria, index) => (
+                          <div key={index} className="bg-secondary/30 rounded-lg p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">{criteria.name}</span>
+                              <Badge variant="outline" className="text-xs">가중치 {criteria.weight}</Badge>
+                            </div>
+                            {criteria.description && (
+                              <p className="text-xs text-muted-foreground">{criteria.description}</p>
+                            )}
+                            {renderStarRating(criteria.score || 0, (v) => handleCompanyCriteriaScoreChange(index, v), 'sm', true)}
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground pl-8">Step 1을 완료하면 활성화됩니다.</p>
+                )}
+              </div>
+
+              {/* Step 3: 맞춤 이력서 만들기 */}
+              <div className={cn("space-y-3", !isStep3Enabled && "opacity-60")}>
+                <div className="flex items-center gap-2">
+                  <div className={cn(
+                    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
+                    "bg-muted text-muted-foreground"
+                  )}>
+                    3
+                  </div>
+                  <h3 className="text-sm font-semibold">Step 3. 맞춤 이력서 만들기</h3>
+                  {!isStep3Enabled && <Lock className="w-3 h-3 text-muted-foreground" />}
+                </div>
+
+                <div className="pl-8">
+                  {isStep3Enabled ? (
+                    <Button 
+                      className="w-full" 
+                      size="lg"
+                      onClick={() => setIsResumeBuilderOpen(true)}
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      이 공고 맞춤 이력서 만들기
+                    </Button>
                   ) : (
                     <>
-                      <p className="text-xs text-muted-foreground">목표 탭에서 설정한 5가지 기준으로 회사를 평가하세요. 같은 별을 다시 누르면 0점으로 초기화됩니다.</p>
-                      {companyCriteriaScores.map((criteria, index) => (
-                        <div key={index} className="bg-secondary/30 rounded-lg p-3 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">{criteria.name}</span>
-                            <Badge variant="outline" className="text-xs">가중치 {criteria.weight}</Badge>
-                          </div>
-                          {criteria.description && (
-                            <p className="text-xs text-muted-foreground">{criteria.description}</p>
-                          )}
-                          {renderStarRating(criteria.score || 0, (v) => handleCompanyCriteriaScoreChange(index, v), 'sm', true)}
-                        </div>
-                      ))}
+                      <p className="text-xs text-muted-foreground mb-3">Step 1, 2를 모두 완료하면 활성화됩니다.</p>
+                      <Button 
+                        className="w-full" 
+                        size="lg"
+                        disabled
+                      >
+                        <Lock className="w-4 h-4 mr-2" />
+                        이 공고 맞춤 이력서 만들기
+                      </Button>
                     </>
                   )}
-                </CollapsibleContent>
-              </Collapsible>
-
-              <Button 
-                className="w-full" 
-                size="lg"
-                onClick={() => setIsResumeBuilderOpen(true)}
-                disabled={!keyCompetencyScores.length}
-              >
-                <FileText className="w-4 h-4 mr-2" />
-                이 공고 맞춤 이력서 만들기
-              </Button>
+                </div>
+              </div>
             </div>
           </ScrollArea>
         </DialogContent>
@@ -622,11 +680,11 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
   );
 }
 
-interface InfoRowWithEvidenceProps {
+// Compact info row for grid layout
+interface InfoRowCompactProps {
   icon: React.ReactNode;
   label: string;
   value?: string;
-  evidence?: string;
   field: string;
   editingField: string | null;
   setEditingField: (field: string | null) => void;
@@ -634,37 +692,37 @@ interface InfoRowWithEvidenceProps {
   isUnconfirmed?: boolean;
 }
 
-function InfoRowWithEvidence({ icon, label, value, evidence, field, editingField, setEditingField, onSave, isUnconfirmed }: InfoRowWithEvidenceProps) {
+function InfoRowCompact({ icon, label, value, field, editingField, setEditingField, onSave, isUnconfirmed }: InfoRowCompactProps) {
   const [localValue, setLocalValue] = useState(value || '');
   const isEditing = editingField === field;
 
   if (isEditing) {
     return (
-      <div className="flex items-center gap-2 bg-secondary/50 rounded-lg p-2">
-        <div className="text-muted-foreground">{icon}</div>
-        <Input value={localValue} onChange={(e) => setLocalValue(e.target.value)} className="h-8 flex-1" autoFocus onBlur={() => onSave(localValue)} onKeyDown={(e) => e.key === 'Enter' && onSave(localValue)} />
+      <div className="bg-secondary/50 rounded-lg p-2">
+        <Input 
+          value={localValue} 
+          onChange={(e) => setLocalValue(e.target.value)} 
+          className="h-7 text-xs" 
+          autoFocus 
+          onBlur={() => onSave(localValue)} 
+          onKeyDown={(e) => e.key === 'Enter' && onSave(localValue)} 
+        />
       </div>
     );
   }
 
   return (
     <div 
-      className="bg-secondary/30 rounded-lg p-3 cursor-pointer hover:bg-secondary/50 transition-colors" 
+      className="bg-secondary/30 rounded-lg p-2 cursor-pointer hover:bg-secondary/50 transition-colors" 
       onClick={() => setEditingField(field)}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1.5">
         <div className="text-muted-foreground">{icon}</div>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs text-muted-foreground">{label}</p>
-          <p className={cn('text-sm font-medium truncate', isUnconfirmed ? 'text-warning' : 'text-foreground')}>{value || '확인 불가'}</p>
-        </div>
+        <span className="text-[10px] text-muted-foreground">{label}</span>
       </div>
-      {evidence && (
-        <div className="mt-2 flex items-start gap-2 text-xs text-muted-foreground bg-background/50 rounded p-2">
-          <Quote className="w-3 h-3 shrink-0 mt-0.5" />
-          <span className="italic break-words [overflow-wrap:anywhere]">{evidence}</span>
-        </div>
-      )}
+      <p className={cn('text-xs font-medium truncate mt-0.5', isUnconfirmed ? 'text-warning' : 'text-foreground')}>
+        {value || '확인 불가'}
+      </p>
     </div>
   );
 }
