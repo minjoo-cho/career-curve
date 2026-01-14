@@ -60,7 +60,9 @@ interface JobDetailDialogProps {
 
 export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }: JobDetailDialogProps) {
   const { updateJobPosting, currentGoals, experiences, jobPostings } = useData();
-  const [isSummaryOpen, setIsSummaryOpen] = useState(true);
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const [isStep1Open, setIsStep1Open] = useState(false);
+  const [isStep2Open, setIsStep2Open] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [isResumeBuilderOpen, setIsResumeBuilderOpen] = useState(false);
   const [editingEvaluation, setEditingEvaluation] = useState<number | null>(null);
@@ -214,26 +216,29 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
   };
 
   const renderStarRating = (value: number, onChange: (v: number) => void, size: 'sm' | 'md' = 'md', allowZero: boolean = false) => (
-    <div className="flex gap-1">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <button 
-          key={i} 
-          onClick={() => {
-            if (allowZero && value === i) {
-              onChange(0);
-            } else {
-              onChange(i);
-            }
-          }} 
-          className="focus:outline-none"
-        >
-          <Star className={cn(
-            'transition-colors', 
-            size === 'sm' ? 'w-4 h-4' : 'w-5 h-5',
-            i <= value ? 'fill-primary text-primary' : 'text-muted-foreground hover:text-primary/50'
-          )} />
-        </button>
-      ))}
+    <div className="flex items-center gap-1 group">
+      <div className="flex gap-0.5 p-1 -m-1 rounded-lg transition-colors group-hover:bg-primary/10">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <button 
+            key={i} 
+            onClick={() => {
+              if (allowZero && value === i) {
+                onChange(0);
+              } else {
+                onChange(i);
+              }
+            }} 
+            className="focus:outline-none transition-transform hover:scale-110"
+          >
+            <Star className={cn(
+              'transition-colors', 
+              size === 'sm' ? 'w-4 h-4' : 'w-5 h-5',
+              i <= value ? 'fill-primary text-primary' : 'text-muted-foreground/40 hover:text-primary/70 hover:fill-primary/30'
+            )} />
+          </button>
+        ))}
+      </div>
+      <Edit2 className="w-3 h-3 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity ml-1" />
     </div>
   );
 
@@ -281,13 +286,13 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
                 </div>
               </DialogHeader>
 
-              {/* AI Summary & Job Info - Collapsible at top */}
+              {/* 공고 요약 - Collapsible at top */}
               <Collapsible open={isSummaryOpen} onOpenChange={setIsSummaryOpen}>
                 <CollapsibleTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-between px-0 h-auto py-1">
+                  <Button variant="ghost" className="w-full justify-between px-0 h-auto py-2">
                     <div className="flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-primary" />
-                      <span className="text-sm font-medium text-muted-foreground">AI 분석 요약</span>
+                      <span className="text-sm font-semibold">공고 요약</span>
                     </div>
                     <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', isSummaryOpen && 'rotate-180')} />
                   </Button>
@@ -385,9 +390,11 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
                 </CollapsibleContent>
               </Collapsible>
 
-              {/* Status Selection */}
+              {/* 지원 상태 */}
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">지원 상태</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold">지원 상태</span>
+                </div>
                 <Select value={job.status} onValueChange={(v) => handleStatusChange(v as JobStatus)}>
                   <SelectTrigger className="w-full">
                     <SelectValue />
@@ -402,11 +409,11 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
                 </Select>
               </div>
 
-              {/* Priority Section - AI Auto with indicator */}
+              {/* 우선순위 */}
               <div className="bg-secondary/50 rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-foreground">우선순위</h3>
+                    <span className="text-sm font-semibold">우선순위</span>
                     <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0 h-5">
                       <Sparkles className="w-3 h-3" />
                       AI 자동
@@ -432,7 +439,7 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
 
                 <div className="grid grid-cols-2 gap-4 pt-2">
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">핵심 역량 적합도</Label>
+                    <span className="text-xs text-muted-foreground">핵심 역량 적합도</span>
                     <div className="flex items-center gap-2">
                       {fitAvg > 0 && <span className="text-lg font-bold text-primary">{fitAvg}</span>}
                       {fitAvg === 0 && <span className="text-lg font-bold text-muted-foreground">-</span>}
@@ -440,7 +447,7 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">회사 매력도</Label>
+                    <span className="text-xs text-muted-foreground">회사 매력도</span>
                     <div className="flex items-center gap-2">
                       {companyAvg > 0 && <span className="text-lg font-bold text-primary">{companyAvg}</span>}
                       {companyAvg === 0 && <span className="text-lg font-bold text-muted-foreground">-</span>}
@@ -451,176 +458,204 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
               </div>
 
               {/* Step 1: 핵심 역량 적합도 평가 */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className={cn(
-                    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
-                    isStep1Complete ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                  )}>
-                    {isStep1Complete ? <Check className="w-3 h-3" /> : "1"}
-                  </div>
-                  <h3 className="text-sm font-semibold">Step 1. 핵심 역량 적합도 평가</h3>
-                  <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0 h-5">
-                    <Sparkles className="w-3 h-3" />
-                    AI 자동
-                  </Badge>
-                </div>
-
-                {keyCompetencyScores.length > 0 ? (
-                  <div className="space-y-3 pl-8">
-                    {/* 종합 피드백 */}
-                    {fitAvg > 0 && (
-                      <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
-                        <h4 className="text-xs font-semibold text-primary mb-1">종합 피드백</h4>
-                        <p className="text-xs text-foreground leading-relaxed">
-                          {fitAvg >= 4 ? (
-                            <>적합한 경험을 보유하고 있습니다. 핵심 역량과 잘 맞는 경험을 강조하여 지원하세요.</>
-                          ) : fitAvg >= 3 ? (
-                            <>일부 역량에서 적합한 경험이 있습니다. 부족한 역량은 관련 경험으로 보완하세요.</>
-                          ) : (
-                            <>핵심 역량과의 매칭이 다소 부족합니다. 전이 가능한 기술을 강조해 보세요.</>
-                          )}
-                        </p>
+              <Collapsible open={isStep1Open} onOpenChange={setIsStep1Open}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-between px-0 h-auto py-2">
+                    <div className="flex items-center gap-2">
+                      <div className={cn(
+                        "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
+                        isStep1Complete ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                      )}>
+                        {isStep1Complete ? <Check className="w-3 h-3" /> : "1"}
                       </div>
-                    )}
-
-                    <p className="text-xs text-muted-foreground">AI가 추출한 핵심 역량입니다. 버튼으로 자동 평가하거나 직접 점수를 입력하세요.</p>
-                    
-                    <FitEvaluationButton
-                      keyCompetencies={keyCompetencyScores}
-                      experiences={experiences}
-                      minExperience={job.minExperience}
-                      onEvaluated={handleAIEvaluated}
-                    />
-
-                    {keyCompetencyScores.map((comp, idx) => (
-                      <Collapsible key={idx}>
-                        <div className="bg-secondary/30 rounded-lg p-3 space-y-2">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1">
-                              <p className="text-sm font-medium break-words [overflow-wrap:anywhere]">{comp.title}</p>
-                              <p className="text-xs text-muted-foreground break-words [overflow-wrap:anywhere]">{comp.description}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">나의 역량:</span>
-                            {renderStarRating(comp.score || 0, (v) => handleKeyCompetencyScoreChange(idx, v), 'sm')}
-                          </div>
-                          {comp.evaluation && (
-                            <CollapsibleTrigger asChild>
-                              <Button variant="ghost" size="sm" className="w-full justify-between text-xs text-muted-foreground h-7 px-2">
-                                <span>AI 평가 보기</span>
-                                <ChevronDown className="w-3 h-3" />
-                              </Button>
-                            </CollapsibleTrigger>
-                          )}
-                          <CollapsibleContent>
-                            {comp.evaluation && editingEvaluation !== idx && (
-                              <div className="bg-background/50 rounded p-2 mt-1">
-                                <div className="flex items-start justify-between gap-2">
-                                  <p className="text-xs text-muted-foreground italic flex-1 break-words [overflow-wrap:anywhere]">{comp.evaluation}</p>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="w-6 h-6 shrink-0"
-                                    onClick={() => {
-                                      setEditingEvaluation(idx);
-                                      setEditEvalText(comp.evaluation || '');
-                                    }}
-                                  >
-                                    <Edit2 className="w-3 h-3" />
-                                  </Button>
-                                </div>
-                              </div>
-                            )}
-                            {editingEvaluation === idx && (
-                              <div className="mt-2 space-y-2">
-                                <Textarea
-                                  value={editEvalText}
-                                  onChange={(e) => setEditEvalText(e.target.value)}
-                                  className="text-xs min-h-[60px]"
-                                  placeholder="평가 의견을 수정하세요..."
-                                />
-                                <div className="flex gap-2 justify-end">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      setEditingEvaluation(null);
-                                      setEditEvalText('');
-                                    }}
-                                  >
-                                    <X className="w-3 h-3 mr-1" />
-                                    취소
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleEvaluationUpdate(idx, editEvalText)}
-                                  >
-                                    <Check className="w-3 h-3 mr-1" />
-                                    저장
-                                  </Button>
-                                </div>
-                              </div>
-                            )}
-                          </CollapsibleContent>
-                        </div>
-                      </Collapsible>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="bg-warning/10 border border-warning/20 rounded-lg p-3 flex items-start gap-2 ml-8">
-                    <AlertCircle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-warning">핵심 역량 분석 필요</p>
-                      <p className="text-xs text-muted-foreground">새 공고를 등록하면 AI가 자동으로 핵심 역량을 추출합니다.</p>
+                      <span className="text-sm font-semibold">Step 1. 핵심 역량 적합도</span>
+                      <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0 h-5">
+                        <Sparkles className="w-3 h-3" />
+                        AI 자동
+                      </Badge>
                     </div>
-                  </div>
-                )}
-              </div>
+                    <div className="flex items-center gap-2">
+                      {fitAvg > 0 && (
+                        <span className="text-sm font-bold text-primary">{fitAvg}/5</span>
+                      )}
+                      <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', isStep1Open && 'rotate-180')} />
+                    </div>
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-3 pt-2">
+                  {keyCompetencyScores.length > 0 ? (
+                    <div className="space-y-3 pl-8">
+                      {/* 종합 피드백 */}
+                      {fitAvg > 0 && (
+                        <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
+                          <h4 className="text-xs font-semibold text-primary mb-1">종합 피드백</h4>
+                          <p className="text-xs text-foreground leading-relaxed">
+                            {fitAvg >= 4 ? (
+                              <>적합한 경험을 보유하고 있습니다. 핵심 역량과 잘 맞는 경험을 강조하여 지원하세요.</>
+                            ) : fitAvg >= 3 ? (
+                              <>일부 역량에서 적합한 경험이 있습니다. 부족한 역량은 관련 경험으로 보완하세요.</>
+                            ) : (
+                              <>핵심 역량과의 매칭이 다소 부족합니다. 전이 가능한 기술을 강조해 보세요.</>
+                            )}
+                          </p>
+                        </div>
+                      )}
+
+                      <p className="text-xs text-muted-foreground">AI가 추출한 핵심 역량입니다. 버튼으로 자동 평가하거나 별점을 클릭해 직접 수정하세요.</p>
+                      
+                      <FitEvaluationButton
+                        keyCompetencies={keyCompetencyScores}
+                        experiences={experiences}
+                        minExperience={job.minExperience}
+                        onEvaluated={handleAIEvaluated}
+                      />
+
+                      {keyCompetencyScores.map((comp, idx) => (
+                        <Collapsible key={idx}>
+                          <div className="bg-secondary/30 rounded-lg p-3 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1">
+                                <p className="text-sm font-medium break-words [overflow-wrap:anywhere]">{comp.title}</p>
+                                <p className="text-xs text-muted-foreground break-words [overflow-wrap:anywhere]">{comp.description}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">나의 역량:</span>
+                              {renderStarRating(comp.score || 0, (v) => handleKeyCompetencyScoreChange(idx, v), 'sm')}
+                            </div>
+                            {comp.evaluation && (
+                              <CollapsibleTrigger asChild>
+                                <Button variant="ghost" size="sm" className="w-full justify-between text-xs text-muted-foreground h-7 px-2">
+                                  <span>AI 평가 보기</span>
+                                  <ChevronDown className="w-3 h-3" />
+                                </Button>
+                              </CollapsibleTrigger>
+                            )}
+                            <CollapsibleContent>
+                              {comp.evaluation && editingEvaluation !== idx && (
+                                <div className="bg-background/50 rounded p-2 mt-1">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p className="text-xs text-muted-foreground italic flex-1 break-words [overflow-wrap:anywhere]">{comp.evaluation}</p>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="w-6 h-6 shrink-0"
+                                      onClick={() => {
+                                        setEditingEvaluation(idx);
+                                        setEditEvalText(comp.evaluation || '');
+                                      }}
+                                    >
+                                      <Edit2 className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                              {editingEvaluation === idx && (
+                                <div className="mt-2 space-y-2">
+                                  <Textarea
+                                    value={editEvalText}
+                                    onChange={(e) => setEditEvalText(e.target.value)}
+                                    className="text-xs min-h-[60px]"
+                                    placeholder="평가 의견을 수정하세요..."
+                                  />
+                                  <div className="flex gap-2 justify-end">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setEditingEvaluation(null);
+                                        setEditEvalText('');
+                                      }}
+                                    >
+                                      <X className="w-3 h-3 mr-1" />
+                                      취소
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleEvaluationUpdate(idx, editEvalText)}
+                                    >
+                                      <Check className="w-3 h-3 mr-1" />
+                                      저장
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </CollapsibleContent>
+                          </div>
+                        </Collapsible>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-warning/10 border border-warning/20 rounded-lg p-3 flex items-start gap-2 ml-8">
+                      <AlertCircle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-warning">핵심 역량 분석 필요</p>
+                        <p className="text-xs text-muted-foreground">새 공고를 등록하면 AI가 자동으로 핵심 역량을 추출합니다.</p>
+                      </div>
+                    </div>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
 
               {/* Step 2: 회사 매력도 평가 */}
-              <div className={cn("space-y-3", !isStep1Complete && "opacity-60")}>
-                <div className="flex items-center gap-2">
-                  <div className={cn(
-                    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
-                    isStep2Complete ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                  )}>
-                    {isStep2Complete ? <Check className="w-3 h-3" /> : "2"}
-                  </div>
-                  <h3 className="text-sm font-semibold">Step 2. 회사 매력도 평가</h3>
-                  {!isStep1Complete && <Lock className="w-3 h-3 text-muted-foreground" />}
-                </div>
-
-                {isStep1Complete ? (
-                  <div className="space-y-3 pl-8">
-                    {companyCriteriaScores.length === 0 ? (
-                      <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 text-center">
-                        <p className="text-sm font-medium text-warning">회사 평가 기준 없음</p>
-                        <p className="text-xs text-muted-foreground mt-1">목표 탭에서 평가 기준을 먼저 설정해주세요.</p>
-                      </div>
-                    ) : (
-                      <>
-                        <p className="text-xs text-muted-foreground">목표 탭에서 설정한 기준으로 회사를 평가하세요. 같은 별을 다시 누르면 0점으로 초기화됩니다.</p>
-                        {companyCriteriaScores.map((criteria, index) => (
-                          <div key={index} className="bg-secondary/30 rounded-lg p-3 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium">{criteria.name}</span>
-                              <Badge variant="outline" className="text-xs">가중치 {criteria.weight}</Badge>
-                            </div>
-                            {criteria.description && (
-                              <p className="text-xs text-muted-foreground">{criteria.description}</p>
-                            )}
-                            {renderStarRating(criteria.score || 0, (v) => handleCompanyCriteriaScoreChange(index, v), 'sm', true)}
-                          </div>
-                        ))}
-                      </>
+              <Collapsible open={isStep2Open} onOpenChange={isStep1Complete ? setIsStep2Open : undefined}>
+                <CollapsibleTrigger asChild disabled={!isStep1Complete}>
+                  <Button 
+                    variant="ghost" 
+                    className={cn(
+                      "w-full justify-between px-0 h-auto py-2",
+                      !isStep1Complete && "opacity-60 cursor-not-allowed"
                     )}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground pl-8">Step 1을 완료하면 활성화됩니다.</p>
-                )}
-              </div>
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={cn(
+                        "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
+                        isStep2Complete ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                      )}>
+                        {isStep2Complete ? <Check className="w-3 h-3" /> : "2"}
+                      </div>
+                      <span className="text-sm font-semibold">Step 2. 회사 매력도</span>
+                      {!isStep1Complete && <Lock className="w-3 h-3 text-muted-foreground" />}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {companyAvg > 0 && (
+                        <span className="text-sm font-bold text-primary">{companyAvg}/5</span>
+                      )}
+                      <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', isStep2Open && 'rotate-180')} />
+                    </div>
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-3 pt-2">
+                  {isStep1Complete ? (
+                    <div className="space-y-3 pl-8">
+                      {companyCriteriaScores.length === 0 ? (
+                        <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 text-center">
+                          <p className="text-sm font-medium text-warning">회사 평가 기준 없음</p>
+                          <p className="text-xs text-muted-foreground mt-1">목표 탭에서 평가 기준을 먼저 설정해주세요.</p>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-xs text-muted-foreground">목표 탭에서 설정한 기준으로 회사를 평가하세요. 별점을 클릭해 수정하고, 같은 별을 다시 누르면 0점으로 초기화됩니다.</p>
+                          {companyCriteriaScores.map((criteria, index) => (
+                            <div key={index} className="bg-secondary/30 rounded-lg p-3 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">{criteria.name}</span>
+                                <Badge variant="outline" className="text-xs">가중치 {criteria.weight}</Badge>
+                              </div>
+                              {criteria.description && (
+                                <p className="text-xs text-muted-foreground">{criteria.description}</p>
+                              )}
+                              {renderStarRating(criteria.score || 0, (v) => handleCompanyCriteriaScoreChange(index, v), 'sm', true)}
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground pl-8">Step 1을 완료하면 활성화됩니다.</p>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
 
               {/* Step 3: 맞춤 이력서 만들기 */}
               <div className={cn("space-y-3", !isStep3Enabled && "opacity-60")}>
