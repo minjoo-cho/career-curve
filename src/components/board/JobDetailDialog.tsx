@@ -286,7 +286,26 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
                 </div>
               </DialogHeader>
 
-              {/* 공고 요약 - Collapsible at top */}
+              {/* 지원 상태 */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold">지원 상태</span>
+                </div>
+                <Select value={job.status} onValueChange={(v) => handleStatusChange(v as JobStatus)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(['reviewing', 'applied', 'interview', 'offer', 'rejected-docs', 'rejected-interview', 'accepted', 'closed'] as JobStatus[]).map((key) => (
+                      <SelectItem key={key} value={key}>
+                        <Badge className={cn('text-xs', STATUS_COLORS[key])}>{STATUS_LABELS[key]}</Badge>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 공고 요약 - Collapsible */}
               <Collapsible open={isSummaryOpen} onOpenChange={setIsSummaryOpen}>
                 <CollapsibleTrigger asChild>
                   <Button variant="ghost" className="w-full justify-between px-0 h-auto py-2">
@@ -390,25 +409,6 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
                 </CollapsibleContent>
               </Collapsible>
 
-              {/* 지원 상태 */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold">지원 상태</span>
-                </div>
-                <Select value={job.status} onValueChange={(v) => handleStatusChange(v as JobStatus)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(['reviewing', 'applied', 'interview', 'offer', 'rejected-docs', 'rejected-interview', 'accepted', 'closed'] as JobStatus[]).map((key) => (
-                      <SelectItem key={key} value={key}>
-                        <Badge className={cn('text-xs', STATUS_COLORS[key])}>{STATUS_LABELS[key]}</Badge>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
               {/* 우선순위 */}
               <div className="bg-secondary/50 rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
@@ -463,10 +463,10 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
                   <Button variant="ghost" className="w-full justify-between px-0 h-auto py-2">
                     <div className="flex items-center gap-2">
                       <div className={cn(
-                        "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
+                        "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors",
                         isStep1Complete ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                       )}>
-                        {isStep1Complete ? <Check className="w-3 h-3" /> : "1"}
+                        {isStep1Complete ? <Check className="w-2.5 h-2.5" /> : "1"}
                       </div>
                       <span className="text-sm font-semibold">Step 1. 핵심 역량 적합도</span>
                       <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0 h-5">
@@ -609,10 +609,11 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
                   >
                     <div className="flex items-center gap-2">
                       <div className={cn(
-                        "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
-                        isStep2Complete ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                        "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors",
+                        isStep2Complete ? "bg-primary text-primary-foreground" : 
+                        isStep1Complete ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
                       )}>
-                        {isStep2Complete ? <Check className="w-3 h-3" /> : "2"}
+                        {isStep2Complete ? <Check className="w-2.5 h-2.5" /> : "2"}
                       </div>
                       <span className="text-sm font-semibold">Step 2. 회사 매력도</span>
                       {!isStep1Complete && <Lock className="w-3 h-3 text-muted-foreground" />}
@@ -661,12 +662,12 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
               <div className={cn("space-y-3", !isStep3Enabled && "opacity-60")}>
                 <div className="flex items-center gap-2">
                   <div className={cn(
-                    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
-                    "bg-muted text-muted-foreground"
+                    "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors",
+                    isStep3Enabled ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
                   )}>
                     3
                   </div>
-                  <h3 className="text-sm font-semibold">Step 3. 맞춤 이력서 만들기</h3>
+                  <span className="text-sm font-semibold">Step 3. 맞춤 이력서 만들기</span>
                   {!isStep3Enabled && <Lock className="w-3 h-3 text-muted-foreground" />}
                 </div>
 
