@@ -226,18 +226,33 @@ ${strongCompetencies.map(k => `- **${k.title}**: ${k.evaluation || '관련 경�
 
 ## 핵심 지시사항
 
-### 1. 표현 및 구성 변경 (가장 중요!)
+### 1. 직무 유형별 서술 스타일 차별화 (매우 중요!)
+동일한 경험도 지원하는 직무에 따라 완전히 다르게 서술해야 합니다:
+
+**Sales/BD 직무**: 파이프라인, 매출, 전환율, 고객 수 등 정량적 성과 강조
+- 예: "고객 유입 퍼널 설계" → "콜드 아웃리치 응답률 15%, 40+ 리드 파이프라인 구축, 첫 유료 고객 확보"
+
+**투자/VC 직무**: 딜 소싱, 포트폴리오 관리, 의사결정 지원, 시장 분석 강조
+- 예: "시장 분석" → "딥테크 스타트업 소싱 및 투자 검토 리서치, 기술 창업기업 발굴 참여"
+
+**Customer Support 직무**: 사용자 피드백, 이슈 재현, 내부 에스컬레이션, 커뮤니케이션 강조
+- 예: "고객 온보딩 지원" → "초기 사용자 온보딩 이슈, 사용성 문제, 기술 질문 직접 처리; 표면적 오류 너머 사용자 니즈 파악"
+
+**PM/전략 직무**: 가설 검증, 로드맵, cross-functional 협업, GTM 강조
+- 예: "제품 개선" → "가설 기반 MVP 2주 내 출시, 오가닉 트래픽 135% 증가, 18건 인바운드 리드"
+
+### 2. 표현 및 구성 변경 (가장 중요!)
 - 원본 bullet point를 **절대 그대로 복사하지 말 것**
 - 공고에서 사용된 키워드와 표현을 자연스럽게 반영
 - 성과를 정량화 (%, 건수, 금액, 기간 등)
 - 예: "프로젝트 진행" → "5명 규모 팀을 리드하여 3개월 내 프로덕트 출시, 사용자 만족도 4.5/5.0 달성"
 
-### 2. 프로젝트 순서 조정
+### 3. 프로젝트 순서 조정
 - 경력(Work Experience): 시간순 유지 (최근→과거)
 - 프로젝트(그 외): **공고 관련도 순으로 재배치**
 - 변경 시 반드시 "원래 순서 → 변경된 순서" 및 이유 명시
 
-### 3. 약한 역량은 솔직하게, 하지만 보완 전략 제시
+### 4. 약한 역량은 솔직하게, 하지만 보완 전략 제시
 - 직접 경험이 없다면 유사 경험의 전이 가능 스킬 언급
 - 완전히 부족하면 솔직히 인정 + 학습/관련 활동 언급
 
@@ -305,18 +320,33 @@ Maximize these with **specific numbers and achievements**.` : ''}
 
 ## CRITICAL INSTRUCTIONS
 
-### 1. Expression & Structure Changes (MOST IMPORTANT!)
+### 1. Role-Specific Writing Style (VERY IMPORTANT!)
+The same experience should be written completely differently depending on the target role:
+
+**Sales/BD roles**: Emphasize pipeline, revenue, conversion rates, customer metrics
+- Example: "Customer acquisition" → "15% cold outreach response rate, 40+ qualified lead pipeline, closed first paying customer"
+
+**Investment/VC roles**: Emphasize deal sourcing, portfolio management, decision support, market analysis
+- Example: "Market analysis" → "Deep-tech startup sourcing and investment due diligence, technology venture discovery"
+
+**Customer Support roles**: Emphasize user feedback, issue reproduction, internal escalation, communication
+- Example: "Customer onboarding" → "Directly handled early user onboarding issues, usability friction, and technical questions; identified underlying needs beyond surface-level errors"
+
+**PM/Strategy roles**: Emphasize hypothesis validation, roadmap, cross-functional collaboration, GTM
+- Example: "Product improvement" → "Launched hypothesis-driven MVP in 2 weeks, 135% organic traffic growth, 18 inbound leads"
+
+### 2. Expression & Structure Changes (MOST IMPORTANT!)
 - **NEVER copy original bullet points verbatim**
 - Naturally incorporate keywords from the job posting
 - Quantify achievements (%, count, amount, duration)
 - Example: "Worked on projects" → "Led 5-person team to launch product in 3 months, achieving 4.5/5.0 user satisfaction"
 
-### 2. Project Order Adjustment
+### 3. Project Order Adjustment
 - Work Experience: Keep chronological order (most recent first)
 - Selected Projects: **Reorder by job relevance**
 - If changed, state "Original order → New order" and reasons
 
-### 3. Be Honest About Weak Competencies, But Provide Compensation
+### 4. Be Honest About Weak Competencies, But Provide Compensation
 - If no direct experience, mention transferable skills from similar experiences
 - If completely lacking, honestly acknowledge + mention learning/related activities
 

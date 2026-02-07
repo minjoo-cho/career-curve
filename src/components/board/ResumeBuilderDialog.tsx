@@ -11,12 +11,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { FileText, CheckCircle2, Loader2, Copy, ArrowRight, Save, ExternalLink, X, Shield } from 'lucide-react';
+import { FileText, CheckCircle2, Loader2, Copy, ArrowRight, Save, ExternalLink, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useData } from '@/contexts/DataContext';
-import { usePhoneVerification } from '@/hooks/usePhoneVerification';
-import { PhoneVerificationDialog } from '@/components/auth/PhoneVerificationDialog';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ResumeBuilderDialogProps {
   open: boolean;
@@ -76,13 +75,11 @@ export function ResumeBuilderDialog({
   const [isSaved, setIsSaved] = useState(false);
   const [lastSavedTailoredResumeId, setLastSavedTailoredResumeId] = useState<string | null>(null);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
-  const [showPhoneDialog, setShowPhoneDialog] = useState(false);
   const { addTailoredResume, hasResumeCredits, subscription } = useData();
-  const { isVerified: isPhoneVerified, isLoading: isPhoneLoading, refetch: refetchPhone } = usePhoneVerification();
+  const { t } = useLanguage();
 
   const hasCredits = hasResumeCredits();
   const isPaidPlan = subscription?.planName !== 'free';
-  const needsPhoneVerification = !isPhoneVerified && !isPhoneLoading;
 
   const workExperiences = useMemo(() => experiences.filter(e => e.type === 'work'), [experiences]);
   const projectExperiences = useMemo(() => experiences.filter(e => e.type === 'project'), [experiences]);
@@ -128,24 +125,18 @@ export function ResumeBuilderDialog({
 
   const handleGenerate = async () => {
     if (selectedExperiences.length === 0) {
-      toast.error('최소 1개의 경험을 선택해주세요');
+      toast.error(t('resume.selectAtLeastOne'));
       return;
     }
 
     // Free plan cannot generate resumes
     if (!isPaidPlan) {
-      toast.error('맞춤 이력서 생성은 유료 요금제 전용 기능입니다.');
+      toast.error(t('resume.paidOnly'));
       return;
     }
 
     if (!hasCredits) {
-      toast.error('이력서 생성 크레딧이 부족합니다. 요금제를 업그레이드해주세요.');
-      return;
-    }
-
-    // Check if phone verification is required
-    if (needsPhoneVerification) {
-      setShowPhoneDialog(true);
+      toast.error(t('resume.noCredits'));
       return;
     }
 
@@ -197,14 +188,14 @@ export function ResumeBuilderDialog({
       setAiFeedback(data.aiFeedback || null);
       setRawAIContent(data.rawContent || null);
       setStep(2); // Now step 2 is the result
-      toast.success('맞춤 이력서가 생성되었습니다');
+      toast.success(t('resume.generated'));
     } catch (error) {
       if (controller.signal.aborted) {
-        toast.info('이력서 생성이 중단되었습니다');
+        toast.info(t('resume.aborted'));
         return;
       }
       console.error('Error generating resume:', error);
-      toast.error(error instanceof Error ? error.message : '이력서 생성 실패');
+      toast.error(error instanceof Error ? error.message : t('resume.generateFailed'));
     } finally {
       setIsGenerating(false);
       setAbortController(null);
@@ -222,7 +213,7 @@ export function ResumeBuilderDialog({
   const handleCopyToClipboard = async () => {
     if (!generatedContent) return;
     await navigator.clipboard.writeText(generatedContent);
-    toast.success('클립보드에 복사되었습니다');
+    toast.success(t('resume.copied'));
   };
 
   const handleSaveToCareer = () => {
@@ -246,7 +237,7 @@ export function ResumeBuilderDialog({
     addTailoredResume(newTailoredResume);
     setLastSavedTailoredResumeId(id);
     setIsSaved(true);
-    toast.success('공고별 이력서가 저장되었습니다');
+    toast.success(t('resume.saved'));
   };
 
   const handleNavigateToCareer = () => {
@@ -258,13 +249,13 @@ export function ResumeBuilderDialog({
   const Step1 = () => (
     <div className="space-y-4">
       <div className="bg-secondary/30 rounded-lg p-3 text-sm text-muted-foreground">
-        생성 언어: <span className="font-medium text-foreground">{language === 'ko' ? '국문' : '영문'}</span> (공고 언어 기반)
+        {t('resume.languageLabel')}: <span className="font-medium text-foreground">{language === 'ko' ? t('resume.korean') : t('resume.english')}</span> ({t('resume.basedOnPosting')})
       </div>
       
       <div className="space-y-2">
-        <h4 className="text-sm font-semibold">핵심 역량 기준</h4>
+        <h4 className="text-sm font-semibold">{t('resume.keyCompetencies')}</h4>
         <p className="text-xs text-muted-foreground">
-          AI가 아래 역량에 맞게 경험을 최적화합니다.
+          {t('resume.keyCompetenciesDesc')}
         </p>
         <div className="flex flex-wrap gap-2">
           {keyCompetencies.map((comp, idx) => (
@@ -288,7 +279,7 @@ export function ResumeBuilderDialog({
             selectAllExperiences();
           }}
         >
-          모두 선택
+          {t('resume.selectAll')}
         </Button>
         <Button
           type="button"
@@ -301,14 +292,14 @@ export function ResumeBuilderDialog({
             deselectAllExperiences();
           }}
         >
-          모두 해제
+          {t('resume.deselectAll')}
         </Button>
       </div>
 
       <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-1">
         {workExperiences.length > 0 && (
           <div className="space-y-2">
-            <h4 className="text-sm font-semibold sticky top-0 bg-background py-1 z-10">경력 (자동 선택됨)</h4>
+            <h4 className="text-sm font-semibold sticky top-0 bg-background py-1 z-10">{t('resume.workExperience')}</h4>
             {workExperiences.map((exp) => (
               <ExperienceCheckbox
                 key={exp.id}
@@ -322,7 +313,7 @@ export function ResumeBuilderDialog({
 
         {projectExperiences.length > 0 && (
           <div className="space-y-2">
-            <h4 className="text-sm font-semibold sticky top-0 bg-background py-1 z-10">프로젝트</h4>
+            <h4 className="text-sm font-semibold sticky top-0 bg-background py-1 z-10">{t('resume.projects')}</h4>
             {projectExperiences.map((exp) => (
               <ExperienceCheckbox
                 key={exp.id}
@@ -336,7 +327,7 @@ export function ResumeBuilderDialog({
 
         {experiences.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-4">
-            경력 탭에서 경험을 먼저 추가해주세요.
+            {t('resume.noExperiences')}
           </p>
         )}
       </div>
@@ -349,10 +340,10 @@ export function ResumeBuilderDialog({
       <div className="space-y-2">
         <h4 className="text-sm font-semibold flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-primary" />
-          맞춤 이력서 생성 완료
+          {t('resume.completed')}
         </h4>
         <p className="text-xs text-muted-foreground">
-          {job.companyName} - {job.title} 포지션에 최적화된 이력서입니다.
+          {job.companyName} - {job.title} {t('resume.optimizedFor')}
         </p>
       </div>
 
@@ -373,10 +364,6 @@ export function ResumeBuilderDialog({
     onOpenChange(open);
   };
 
-  const handlePhoneVerified = () => {
-    refetchPhone();
-    // User can now click generate again
-  };
 
   return (
     <>
@@ -386,7 +373,7 @@ export function ResumeBuilderDialog({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5" />
-                맞춤 이력서 만들기
+                {t('resume.title')}
               </DialogTitle>
             </DialogHeader>
 
@@ -405,28 +392,22 @@ export function ResumeBuilderDialog({
               <div className="flex flex-col gap-2">
                 {!isPaidPlan && (
                   <div className="bg-destructive/10 text-destructive text-xs p-2 rounded-lg text-center">
-                    맞춤 이력서 생성은 유료 요금제 전용 기능입니다.
+                    {t('resume.paidOnly')}
                   </div>
                 )}
                 {isPaidPlan && !hasCredits && (
                   <div className="bg-destructive/10 text-destructive text-xs p-2 rounded-lg text-center">
-                    이력서 생성 크레딧이 부족합니다. 요금제를 업그레이드해주세요.
+                    {t('resume.noCredits')}
                   </div>
                 )}
-                {isPaidPlan && hasCredits && needsPhoneVerification && (
-                  <div className="bg-warning/10 text-warning text-xs p-2 rounded-lg text-center flex items-center justify-center gap-1.5">
-                    <Shield className="w-3.5 h-3.5" />
-                    전화번호 인증 후 사용 가능합니다.
-                  </div>
-                )}
-                {isPaidPlan && hasCredits && !needsPhoneVerification && !isGenerating && (
+                {isPaidPlan && hasCredits && !isGenerating && (
                   <div className="bg-muted/50 text-muted-foreground text-xs p-2 rounded-lg text-center">
-                    20초 정도 소요됩니다. 중간에 창을 닫거나 나가면 저장되지 않습니다.
+                    {t('resume.generationTime')}
                   </div>
                 )}
                 {isGenerating && (
                   <div className="bg-warning/10 text-warning text-xs p-2 rounded-lg text-center">
-                    생성 중... 20초 정도 소요됩니다. 중간에 창을 닫거나 나가면 저장되지 않습니다.
+                    {t('resume.generating')}
                   </div>
                 )}
                 {isGenerating ? (
@@ -436,7 +417,7 @@ export function ResumeBuilderDialog({
                     onClick={handleAbort}
                   >
                     <X className="w-4 h-4 mr-2" />
-                    중단하기
+                    {t('resume.abort')}
                   </Button>
                 ) : (
                   <Button
@@ -444,8 +425,7 @@ export function ResumeBuilderDialog({
                     onClick={handleGenerate}
                     disabled={selectedExperiences.length === 0 || !hasCredits || !isPaidPlan}
                   >
-                    {needsPhoneVerification && <Shield className="w-4 h-4 mr-2" />}
-                    맞춤 이력서 생성
+                    {t('resume.generate')}
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 )}
@@ -459,11 +439,11 @@ export function ResumeBuilderDialog({
                     <div className="flex gap-2">
                       <Button variant="outline" className="flex-1" onClick={handleCopyToClipboard}>
                         <Copy className="w-4 h-4 mr-2" />
-                        복사
+                        {t('resume.copy')}
                       </Button>
                       <Button className="flex-1" onClick={handleSaveToCareer}>
                         <Save className="w-4 h-4 mr-2" />
-                        공고별 이력서 저장
+                        {t('resume.save')}
                       </Button>
                     </div>
                     <Button
@@ -474,17 +454,17 @@ export function ResumeBuilderDialog({
                         setGeneratedContent(null);
                       }}
                     >
-                      다시 생성하기
+                      {t('resume.regenerate')}
                     </Button>
                   </>
                 ) : (
                   <>
                     <Button className="w-full" onClick={handleNavigateToCareer}>
                       <ExternalLink className="w-4 h-4 mr-2" />
-                      공고별 이력서 확인하기
+                      {t('resume.viewInCareer')}
                     </Button>
                     <Button variant="outline" className="w-full" onClick={() => onOpenChange(false)}>
-                      닫기
+                      {t('common.close')}
                     </Button>
                   </>
                 )}
@@ -494,12 +474,6 @@ export function ResumeBuilderDialog({
         </DialogContent>
       </Dialog>
 
-      <PhoneVerificationDialog
-        open={showPhoneDialog}
-        onOpenChange={setShowPhoneDialog}
-        onVerified={handlePhoneVerified}
-        triggerReason="resume_generation"
-      />
     </>
   );
 }
