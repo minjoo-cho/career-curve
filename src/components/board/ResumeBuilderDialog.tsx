@@ -148,7 +148,17 @@ export function ResumeBuilderDialog({
 
     try {
       // Credits are now deducted server-side in the edge function
-      const selectedExps = experiences.filter(e => selectedExperiences.includes(e.id));
+      // Filter selected experiences and remove any with empty titles
+      const selectedExps = experiences
+        .filter(e => selectedExperiences.includes(e.id))
+        .filter(e => e.title && e.title.trim().length > 0);
+
+      if (selectedExps.length === 0) {
+        toast.error(t('resume.noValidExperiences') || '유효한 경험이 없습니다.');
+        setIsGenerating(false);
+        setAbortController(null);
+        return;
+      }
 
       const { data, error } = await supabase.functions.invoke('generate-resume', {
         body: {
