@@ -1293,23 +1293,128 @@ function FormattedFeedback({ content }: { content: string }) {
 }
 
 function FeedbackSplitView({ content }: { content: string }) {
+  const { language } = useLanguage();
   const sections = splitFeedbackSections(content);
 
   return (
     <div className="grid gap-3">
       <section className="bg-accent/30 rounded-lg p-4 text-sm text-foreground leading-relaxed">
-        <h3 className="font-bold text-lg text-foreground mb-2 border-b border-border pb-1">종합의견</h3>
+        <h3 className="font-bold text-lg text-foreground mb-2 border-b border-border pb-1">
+          {language === 'en' ? 'Overall Assessment' : '종합의견'}
+        </h3>
         <div className="max-h-[22vh] overflow-y-auto">
           <FormattedFeedback content={sections.overall} />
         </div>
       </section>
 
       <section className="bg-accent/30 rounded-lg p-4 text-sm text-foreground leading-relaxed">
-        <h3 className="font-bold text-lg text-foreground mb-2 border-b border-border pb-1">세부 수정 의견</h3>
-        <div className="max-h-[22vh] overflow-y-auto">
-          <FormattedFeedback content={sections.details} />
+        <h3 className="font-bold text-lg text-foreground mb-2 border-b border-border pb-1">
+          {language === 'en' ? 'Detailed Revisions' : '세부 수정 의견'}
+        </h3>
+        <div className="max-h-[40vh] overflow-y-auto space-y-3">
+          <RevisionCards content={sections.details} language={language} />
         </div>
       </section>
+    </div>
+  );
+}
+
+function RevisionCards({ content, language }: { content: string; language: 'ko' | 'en' }) {
+  // Parse revision items - look for patterns like "**[Title]**" or "- Original:" etc.
+  const lines = content.split('\n');
+  const cards: { title: string; original: string; revised: string; reason: string }[] = [];
+  let currentCard: { title: string; original: string; revised: string; reason: string } | null = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    
+    // Check for experience title: **[Title]**
+    const titleMatch = trimmed.match(/^\*\*\[?(.+?)\]?\*\*$/);
+    if (titleMatch) {
+      if (currentCard && (currentCard.original || currentCard.revised)) {
+        cards.push(currentCard);
+      }
+      currentCard = { title: titleMatch[1], original: '', revised: '', reason: '' };
+      continue;
+    }
+
+    if (!currentCard) continue;
+
+    // Original line
+    const originalMatch = trimmed.match(/^-?\s*(원문|Original)\s*[:：]\s*[""]?(.+?)[""]?$/i);
+    if (originalMatch) {
+      currentCard.original = originalMatch[2].replace(/^[""]|[""]$/g, '');
+      continue;
+    }
+
+    // Revised line  
+    const revisedMatch = trimmed.match(/^-?\s*(수정|Revised)\s*[:：]\s*[""]?(.+?)[""]?$/i);
+    if (revisedMatch) {
+      currentCard.revised = revisedMatch[2].replace(/^[""]|[""]$/g, '');
+      continue;
+    }
+
+    // Reason line
+    const reasonMatch = trimmed.match(/^-?\s*(근거|Reason)\s*[:：]\s*(.+)$/i);
+    if (reasonMatch) {
+      currentCard.reason = reasonMatch[2];
+      continue;
+    }
+  }
+
+  // Push last card
+  if (currentCard && (currentCard.original || currentCard.revised)) {
+    cards.push(currentCard);
+  }
+
+  // If no structured cards found, fall back to formatted feedback
+  if (cards.length === 0) {
+    return <FormattedFeedback content={content} />;
+  }
+
+  return (
+    <div className="space-y-4">
+      {cards.map((card, idx) => (
+        <div key={idx} className="bg-background/60 rounded-lg border border-border overflow-hidden">
+          <div className="bg-primary/10 px-3 py-2 border-b border-border">
+            <span className="font-semibold text-primary text-sm">{card.title}</span>
+          </div>
+          <div className="p-3 space-y-2">
+            {card.original && (
+              <div className="flex gap-2">
+                <span className="shrink-0 text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                  {language === 'en' ? 'Before' : '원문'}
+                </span>
+                <span className="text-sm text-muted-foreground line-through decoration-destructive/50">
+                  {card.original}
+                </span>
+              </div>
+            )}
+            {card.revised && (
+              <div className="flex gap-2">
+                <span className="shrink-0 text-xs font-medium text-primary-foreground bg-primary px-1.5 py-0.5 rounded">
+                  {language === 'en' ? 'After' : '수정'}
+                </span>
+                <span className="text-sm text-foreground font-medium">
+                  {card.revised}
+                </span>
+              </div>
+            )}
+            {card.reason && (
+              <div className="mt-2 pt-2 border-t border-border/50">
+                <div className="flex gap-2 items-start">
+                  <span className="shrink-0 text-xs font-medium text-accent-foreground bg-accent px-1.5 py-0.5 rounded">
+                    {language === 'en' ? 'Why' : '근거'}
+                  </span>
+                  <span className="text-sm text-muted-foreground italic">
+                    {card.reason}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -1318,7 +1423,7 @@ function splitFeedbackSections(raw: string): { overall: string; details: string 
   const text = (raw || '').trim();
   if (!text) return { overall: '', details: '' };
 
-  // Try Korean headings first
+  // Try Korean headings first (without space: 종합의견)
   const koOverallIdx = text.indexOf('## 종합의견');
   const koDetailIdx = text.indexOf('## 세부 수정 의견');
   if (koOverallIdx !== -1 && koDetailIdx !== -1) {
@@ -1327,12 +1432,32 @@ function splitFeedbackSections(raw: string): { overall: string; details: string 
     return { overall: overall || '—', details: details || '—' };
   }
 
-  // English headings fallback
+  // Try Korean headings with space: 종합 의견
+  const koOverallIdx2 = text.indexOf('## 종합 의견');
+  const koDetailIdx2 = text.indexOf('## 세부 수정 내용');
+  if (koOverallIdx2 !== -1) {
+    const detailStart = koDetailIdx2 !== -1 ? koDetailIdx2 : text.length;
+    const overall = text.slice(koOverallIdx2 + '## 종합 의견'.length, detailStart).trim();
+    const details = koDetailIdx2 !== -1 ? text.slice(koDetailIdx2 + '## 세부 수정 내용'.length).trim() : '—';
+    return { overall: overall || '—', details: details || '—' };
+  }
+
+  // English headings
   const enOverallIdx = text.toLowerCase().indexOf('## overall assessment');
-  const enDetailIdx = text.toLowerCase().indexOf('## detailed revision notes');
-  if (enOverallIdx !== -1 && enDetailIdx !== -1) {
-    const overall = text.slice(enOverallIdx + '## Overall Assessment'.length, enDetailIdx).trim();
-    const details = text.slice(enDetailIdx + '## Detailed Revision Notes'.length).trim();
+  const enDetailIdx = text.toLowerCase().indexOf('## detailed revisions');
+  if (enOverallIdx !== -1) {
+    const detailStart = enDetailIdx !== -1 ? enDetailIdx : text.length;
+    const overall = text.slice(enOverallIdx + '## Overall Assessment'.length, detailStart).trim();
+    const details = enDetailIdx !== -1 ? text.slice(enDetailIdx + '## Detailed Revisions'.length).trim() : '—';
+    return { overall: overall || '—', details: details || '—' };
+  }
+
+  // Legacy English headings fallback
+  const enOverallIdxLegacy = text.toLowerCase().indexOf('## overall opinion');
+  const enDetailIdxLegacy = text.toLowerCase().indexOf('## detailed revision notes');
+  if (enOverallIdxLegacy !== -1 && enDetailIdxLegacy !== -1) {
+    const overall = text.slice(enOverallIdxLegacy + '## Overall Opinion'.length, enDetailIdxLegacy).trim();
+    const details = text.slice(enDetailIdxLegacy + '## Detailed Revision Notes'.length).trim();
     return { overall: overall || '—', details: details || '—' };
   }
 
