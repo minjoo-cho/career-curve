@@ -264,28 +264,27 @@ ${strongCompetencies.map(k => `- **${k.title}**: ${k.evaluation || '관련 경�
 
 ## AI_FEEDBACK 작성 규칙
 
-### 1) ## 종합 의견 (한국어, 한 번만 작성)
+### 1) ## 종합의견 (한국어, 한 번만 작성 - 반드시 "## 종합의견"으로 시작)
 **채용 담당자 관점**에서:
 - 이 지원자의 전반적인 적합도 평가
 - **부족한 역량과 그것이 채용에 미칠 수 있는 영향** (솔직하게!)
 - 강조할 핵심 포인트와 약점 보완 전략
-- ⚠️ 이 섹션을 중복 출력하지 말 것
+- ⚠️ 이 섹션을 절대 중복 출력하지 말 것!
 
-### 2) ## 역량 분석
-각 핵심 역량별로:
-- 지원자의 강점/약점 (AI 평가 점수 반영)
-- 어떻게 보완했는지 (또는 보완이 어려운 경우 그 한계)
-- 이력서에서 해당 역량이 어떻게 드러나는지
+### 2) ## 세부 수정 의견
+각 경험별로 아래 형식으로 작성:
 
-### 3) ## 프로젝트 순서 조정
-- 변경했다면: "원래 순서: A, B, C → 변경된 순서: B, A, C"
-- 각 배치 이유: "프로젝트 B를 1순위로 배치 - [핵심 역량 X]와 직접 연관"
-- 변경 없다면: "기존 순서 유지 - 이유: [설명]"
+**[경험 제목]**
+- 원문: "[원래 bullet point 전체]"
+- 수정: "[수정된 bullet point 전체]"  
+- 근거: [왜 이렇게 바꿨는지 1-2문장]
 
-### 4) ## 세부 수정 내용
-- **"원문 → 수정본"** 형태로 구체적 변경 사항 나열
-- 왜 변경했는지 간단히 설명
-- 예: "'데이터 분석 업무 수행' → '50K+ 사용자 행동 데이터 분석으로 이탈률 15% 감소' (성과 정량화)"
+(다음 경험에 대해서도 동일하게 반복)
+
+중요:
+- 각 수정 항목은 명확히 "원문/수정/근거" 구조로 작성
+- 근거는 구체적으로 (예: "성과 정량화", "직무 키워드 반영", "전이 가능 스킬 강조")
+- 프로젝트 순서를 변경했다면 맨 위에 순서 변경 이유 먼저 명시
 
 ## RESUME 작성 규칙
 - 결과는 한국어로 작성
@@ -358,28 +357,27 @@ The same experience should be written completely differently depending on the ta
 
 ## AI_FEEDBACK Rules
 
-### 1) ## 종합 의견 (IN KOREAN, write only once)
+### 1) ## Overall Assessment (write ONCE only - must start with "## Overall Assessment")
 **From recruiter's perspective**:
 - Overall fit assessment for this candidate
 - **Gaps and their potential impact on hiring** (be honest!)
 - Key points to highlight and gap compensation strategy
-- ⚠️ Do NOT duplicate this section
+- ⚠️ Do NOT duplicate this section!
 
-### 2) ## Competency Analysis
-For each key competency:
-- Candidate's strengths/weaknesses (reflect AI scores)
-- How it was compensated (or limitations)
-- How this competency shows in the resume
+### 2) ## Detailed Revisions
+For each experience, use this format:
 
-### 3) ## Project Order Adjustments
-- If changed: "Original order: A, B, C → New order: B, A, C"
-- Reason: "Project B placed first - directly relevant to [competency X]"
-- If unchanged: "Original order maintained - Reason: [explanation]"
+**[Experience Title]**
+- Original: "[full original bullet point]"
+- Revised: "[full revised bullet point]"
+- Reason: [1-2 sentences explaining why]
 
-### 4) ## Detailed Revisions
-- Show **"Original → Revised"** format for each change
-- Brief explanation of why
-- Example: "'Performed data analysis' → 'Analyzed 50K+ user data to reduce churn by 15%' (quantified impact)"
+(Repeat for each experience)
+
+Important:
+- Each revision must have clear "Original/Revised/Reason" structure
+- Reasons should be specific (e.g., "quantified impact", "matched job keywords", "highlighted transferable skills")
+- If project order was changed, state the reordering reason at the top
 
 ## RESUME Rules
 - Write in native-level English

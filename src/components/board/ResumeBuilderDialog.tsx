@@ -197,8 +197,29 @@ export function ResumeBuilderDialog({
       setGeneratedContent(data.content);
       setAiFeedback(data.aiFeedback || null);
       setRawAIContent(data.rawContent || null);
+
+      // Auto-save the resume to Career tab
+      const now = new Date();
+      const id = Date.now().toString();
+      const newTailoredResume: TailoredResume = {
+        id,
+        jobPostingId: job.id,
+        companyName: job.companyName,
+        jobTitle: job.title,
+        content: data.content,
+        aiFeedback: data.aiFeedback || undefined,
+        language,
+        format: selectedFormat,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      addTailoredResume(newTailoredResume);
+      setLastSavedTailoredResumeId(id);
+      setIsSaved(true);
+      
       setStep(2); // Now step 2 is the result
-      toast.success(t('resume.generated'));
+      toast.success(t('resume.autoSaved') || '맞춤 이력서가 생성되어 자동 저장되었습니다');
     } catch (error) {
       if (controller.signal.aborted) {
         toast.info(t('resume.aborted'));
@@ -412,12 +433,12 @@ export function ResumeBuilderDialog({
                 )}
                 {isPaidPlan && hasCredits && !isGenerating && (
                   <div className="bg-muted/50 text-muted-foreground text-xs p-2 rounded-lg text-center">
-                    {t('resume.generationTime')}
+                    {t('resume.generationTimeAutoSave') || '20초 정도 소요됩니다. 화면을 나가도 자동 저장됩니다.'}
                   </div>
                 )}
                 {isGenerating && (
-                  <div className="bg-warning/10 text-warning text-xs p-2 rounded-lg text-center">
-                    {t('resume.generating')}
+                  <div className="bg-primary/10 text-primary text-xs p-2 rounded-lg text-center">
+                    {t('resume.generatingAutoSave') || '생성 중... 완료 시 자동으로 경력 탭에 저장됩니다.'}
                   </div>
                 )}
                 {isGenerating ? (
