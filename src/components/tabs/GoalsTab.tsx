@@ -16,6 +16,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -28,6 +38,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { CareerGoal } from '@/types/job';
+import { toast } from 'sonner';
 
 function toDateInputValue(date: Date) {
   const d = new Date(date);
@@ -75,13 +86,15 @@ function isGoalEnded(goal: CareerGoal | null): boolean {
 }
 
 export function GoalsTab() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { currentGoals, addGoal, updateGoal, removeGoal } = useData();
   const [goalHistory, setGoalHistory] = useState<any[]>([]); // Local state for history since not in DB yet
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [pendingNewGoal, setPendingNewGoal] = useState<CareerGoal | null>(null);
+  const [deleteGoalId, setDeleteGoalId] = useState<string | null>(null);
+  
   // Filter out goals that have endDate (they should be archived)
   const activeGoals = currentGoals.filter((g) => !isGoalEnded(g));
 
@@ -105,6 +118,12 @@ export function GoalsTab() {
   const handleArchiveGoal = (goal: CareerGoal) => {
     archiveGoal({ ...goal, endDate: goal.endDate ?? new Date(), updatedAt: new Date() });
     removeGoal(goal.id);
+  };
+
+  const handleDeleteGoal = (goalId: string) => {
+    removeGoal(goalId);
+    setDeleteGoalId(null);
+    toast.success(language === 'en' ? 'Goal deleted' : '목표가 삭제되었습니다');
   };
 
   return (
@@ -152,21 +171,21 @@ export function GoalsTab() {
                       <div className="flex items-center gap-2 bg-primary/10 rounded-lg px-3 py-2">
                         <Calendar className="w-4 h-4 text-primary" />
                         <div>
-                          <p className="text-xs text-muted-foreground">목표 기간</p>
+                          <p className="text-xs text-muted-foreground">{t('goals.period')}</p>
                           <p className="text-sm font-medium text-foreground">
                             {formatKoreanDate(goal.startDate)}~
                           </p>
                         </div>
                       </div>
                       <Badge variant="secondary" className="text-xs">
-                        {daysSinceStart}일째
+                        {daysSinceStart}{language === 'en' ? ` ${t('goals.days')}` : '일째'}
                       </Badge>
                     </div>
 
                     {/* Reason */}
                     <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide">이직 이유</p>
-                      <p className="text-sm text-foreground">{goal.reason || '아직 입력되지 않았습니다'}</p>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide">{t('goals.reason')}</p>
+                      <p className="text-sm text-foreground">{goal.reason || t('goals.reasonEmpty')}</p>
                       {goal.careerPath && (
                         <p className="text-xs text-primary">{goal.careerPath}</p>
                       )}
@@ -175,7 +194,7 @@ export function GoalsTab() {
                     {/* Result */}
                     {goal.result && (
                       <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide">결과</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">{t('goals.result')}</p>
                         <p className="text-sm text-foreground">{goal.result}</p>
                       </div>
                     )}
@@ -183,7 +202,7 @@ export function GoalsTab() {
                     {/* Company Eval Criteria - Priority Order */}
                     <div className="space-y-2">
                       <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                        회사 평가 기준 (우선순위)
+                        {t('goals.criteria')}
                       </p>
                       <div className="space-y-2">
                         {[...goal.companyEvalCriteria]
@@ -223,7 +242,7 @@ export function GoalsTab() {
                         onClick={() => setEditingGoalId(goal.id)}
                       >
                         <Edit2 className="w-4 h-4 mr-2" />
-                        수정
+                        {t('goals.edit')}
                       </Button>
                       <Button
                         variant="ghost"
@@ -232,7 +251,15 @@ export function GoalsTab() {
                         onClick={() => handleArchiveGoal(goal)}
                       >
                         <History className="w-4 h-4 mr-2" />
-                        기록으로
+                        {t('goals.archive')}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setDeleteGoalId(goal.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
@@ -241,8 +268,8 @@ export function GoalsTab() {
             </div>
           ) : (
             <div className="p-8 text-center">
-              <p className="text-muted-foreground text-sm">현재 목표 없음</p>
-              <p className="text-xs text-muted-foreground mt-1">새 목표 버튼을 눌러 시작하세요</p>
+              <p className="text-muted-foreground text-sm">{t('goals.noGoal')}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t('goals.noGoalDesc')}</p>
             </div>
           )}
         </div>
@@ -253,7 +280,7 @@ export function GoalsTab() {
             <CollapsibleTrigger className="w-full flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
                 <History className="w-5 h-5 text-muted-foreground" />
-                <h2 className="font-semibold text-foreground">이전 기록</h2>
+                <h2 className="font-semibold text-foreground">{t('goals.history')}</h2>
                 <Badge variant="secondary" className="text-xs">
                   {goalHistory.length}
                 </Badge>
@@ -269,7 +296,7 @@ export function GoalsTab() {
               <div className="px-4 pb-4 space-y-3">
                 {goalHistory.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">
-                    아직 기록이 없습니다
+                    {t('goals.noHistory')}
                   </p>
                 ) : (
                   goalHistory.map((record) => {
@@ -315,12 +342,12 @@ export function GoalsTab() {
                         </div>
                         {/* Career Path as main display */}
                         <p className="text-sm font-medium text-foreground">
-                          {record.goal.careerPath || '(커리어 패스 없음)'}
+                          {record.goal.careerPath || (language === 'en' ? '(No career path)' : '(커리어 패스 없음)')}
                         </p>
                         {/* Result if exists */}
                         {record.goal.result && (
                           <p className="text-xs text-primary">
-                            결과: {record.goal.result}
+                            {t('goals.result')}: {record.goal.result}
                           </p>
                         )}
                       </div>
@@ -372,6 +399,27 @@ export function GoalsTab() {
           }}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteGoalId} onOpenChange={(open) => !open && setDeleteGoalId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('goals.deleteConfirm')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('goals.deleteDesc')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteGoalId && handleDeleteGoal(deleteGoalId)}
+            >
+              {t('goals.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -385,6 +433,7 @@ interface GoalsEditDialogProps {
 }
 
 function GoalsEditDialog({ open, onOpenChange, goal, onSave, onArchive }: GoalsEditDialogProps) {
+  const { t, language } = useLanguage();
   const [formData, setFormData] = useState({
     reason: goal.reason,
     careerPath: goal.careerPath || '',
@@ -443,20 +492,19 @@ function GoalsEditDialog({ open, onOpenChange, goal, onSave, onArchive }: GoalsE
       endDate,
       updatedAt: new Date(),
     });
-    onOpenChange(false);
   };
 
   const handleArchive = () => {
     if (!formData.result.trim()) {
       setResultError(true);
+      setShowArchiveResult(true);
       return;
     }
-    setResultError(false);
 
     const startDate = formData.startDate ? new Date(formData.startDate) : new Date();
     const endDate = formData.endDate ? new Date(formData.endDate) : new Date();
 
-    const archivedGoal: CareerGoal = {
+    onArchive?.({
       ...goal,
       reason: formData.reason,
       careerPath: formData.careerPath || undefined,
@@ -466,178 +514,170 @@ function GoalsEditDialog({ open, onOpenChange, goal, onSave, onArchive }: GoalsE
       startDate,
       endDate,
       updatedAt: new Date(),
-    };
-
-    onArchive?.(archivedGoal);
+    });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[90%] max-h-[80vh] overflow-y-auto rounded-2xl">
+      <DialogContent className="max-w-[90%] max-h-[85vh] rounded-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>커리어 목표 수정</DialogTitle>
+          <DialogTitle>{goal.id ? t('goals.edit') : t('goals.newGoal')}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
+          {/* Start Date */}
           <div className="space-y-2">
-            <Label>현재 목표 기간</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">시작일</Label>
-                <Input
-                  type="date"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">목표 종료일 (선택)</Label>
-                <Input
-                  type="date"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                />
-              </div>
-            </div>
+            <Label>{t('goals.startDate')}</Label>
+            <Input
+              type="date"
+              value={formData.startDate}
+              onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+            />
           </div>
 
+          {/* End Date (optional - for archiving) */}
           <div className="space-y-2">
-            <Label>이직 탐색 기간(선택)</Label>
+            <Label>{t('goals.endDate')}</Label>
+            <Input
+              type="date"
+              value={formData.endDate}
+              onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+            />
+          </div>
+
+          {/* Reason */}
+          <div className="space-y-2">
+            <Label>{t('goals.reason')}</Label>
+            <Textarea
+              value={formData.reason}
+              onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+              placeholder={language === 'en' ? 'Why are you looking for a new job?' : '이직을 결심한 이유를 적어주세요'}
+              rows={3}
+            />
+          </div>
+
+          {/* Career Path */}
+          <div className="space-y-2">
+            <Label>{t('goals.careerPath')}</Label>
+            <Input
+              value={formData.careerPath}
+              onChange={(e) => setFormData({ ...formData, careerPath: e.target.value })}
+              placeholder={language === 'en' ? 'e.g., PM → Senior PM → Director' : '예: PM → 시니어 PM → 디렉터'}
+            />
+          </div>
+
+          {/* Search Period */}
+          <div className="space-y-2">
+            <Label>{t('goals.searchPeriod')}</Label>
             <Select
               value={formData.searchPeriod}
               onValueChange={(v) => setFormData({ ...formData, searchPeriod: v })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="기간 선택" />
+                <SelectValue placeholder={language === 'en' ? 'Select period' : '기간 선택'} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="1개월">1개월</SelectItem>
-                <SelectItem value="3개월">3개월</SelectItem>
-                <SelectItem value="6개월">6개월</SelectItem>
-                <SelectItem value="1년">1년</SelectItem>
-                <SelectItem value="상시">상시</SelectItem>
+                <SelectItem value="1개월">{language === 'en' ? '1 month' : '1개월'}</SelectItem>
+                <SelectItem value="3개월">{language === 'en' ? '3 months' : '3개월'}</SelectItem>
+                <SelectItem value="6개월">{language === 'en' ? '6 months' : '6개월'}</SelectItem>
+                <SelectItem value="1년">{language === 'en' ? '1 year' : '1년'}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
+          {/* Company Evaluation Criteria */}
           <div className="space-y-2">
-            <Label htmlFor="reason">이직 이유</Label>
-            <Textarea
-              id="reason"
-              value={formData.reason}
-              onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-              rows={2}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="careerPath">커리어 패스</Label>
-            <Input
-              id="careerPath"
-              value={formData.careerPath}
-              onChange={(e) => setFormData({ ...formData, careerPath: e.target.value })}
-              placeholder="예: 시니어 엔지니어 → 테크 리드"
-            />
-          </div>
-
-
-          {/* Company Eval Criteria */}
-          <div className="space-y-3">
-            <Label className={cn(criteriaError && "text-destructive")}>
-              회사 평가 기준 (가중치 클릭으로 조절) <span className="text-destructive">*</span>
+            <Label className={criteriaError ? 'text-destructive' : ''}>
+              {t('goals.criteriaLabel')}
             </Label>
             {criteriaError && (
-              <p className="text-xs text-destructive">최소 1개 이상의 회사 평가 기준을 입력해주세요.</p>
+              <p className="text-xs text-destructive">{t('goals.criteriaRequired')}</p>
             )}
-            {formData.companyEvalCriteria.map((c, i) => (
-              <div key={i} className="space-y-2 p-3 bg-secondary/30 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={c.name}
-                    onChange={(e) => {
-                      updateCriteriaName(i, e.target.value);
-                      if (e.target.value.trim()) setCriteriaError(false);
-                    }}
-                    className={cn("flex-1 h-9", criteriaError && i === 0 && !c.name.trim() && "border-destructive")}
-                    placeholder="기준 이름"
-                  />
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() => updateCriteriaWeight(i, n)}
-                        className={cn(
-                          'w-6 h-6 rounded-full transition-colors',
-                          n <= c.weight
-                            ? 'bg-primary'
-                            : 'bg-muted hover:bg-muted-foreground/20'
-                        )}
-                      />
-                    ))}
+            <div className="space-y-3">
+              {formData.companyEvalCriteria.map((c, i) => (
+                <div key={i} className="space-y-2 bg-secondary/30 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={c.name}
+                      onChange={(e) => updateCriteriaName(i, e.target.value)}
+                      placeholder={language === 'en' ? 'Criterion name' : '기준 이름'}
+                      className="flex-1"
+                    />
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => updateCriteriaWeight(i, n)}
+                          className={cn(
+                            'w-6 h-6 rounded-full transition-colors',
+                            n <= c.weight ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                          )}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                  <Input
+                    value={c.description || ''}
+                    onChange={(e) => updateCriteriaDescription(i, e.target.value)}
+                    placeholder={language === 'en' ? 'Description (optional)' : '설명 (선택)'}
+                    className="text-sm"
+                  />
                 </div>
-                <Input
-                  value={c.description || ''}
-                  onChange={(e) => updateCriteriaDescription(i, e.target.value)}
-                  className="h-8 text-xs"
-                  placeholder="이 기준이 왜 중요한지 설명해주세요 (선택)"
-                />
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
-          {/* Archive Goal Section */}
+          {/* Archive Section */}
           {onArchive && (
             <div className="border-t border-border pt-4 space-y-3">
               <Button
-                type="button"
                 variant="outline"
                 className="w-full"
                 onClick={() => setShowArchiveResult(!showArchiveResult)}
               >
-                <History className="w-4 h-4 mr-2" />
-                목표 종료하기
+                <Archive className="w-4 h-4 mr-2" />
+                {t('goals.archiveGoal')}
               </Button>
-              
+
               {showArchiveResult && (
-                <div className="space-y-2 p-3 bg-secondary/30 rounded-lg">
-                  <Label htmlFor="archiveResult" className={cn(resultError && "text-destructive")}>
-                    결과 기록 <span className="text-destructive">*</span>
+                <div className="space-y-2">
+                  <Label className={resultError ? 'text-destructive' : ''}>
+                    {t('goals.resultRecord')} *
                   </Label>
+                  {resultError && (
+                    <p className="text-xs text-destructive">{t('goals.resultRequired')}</p>
+                  )}
                   <Textarea
-                    id="archiveResult"
                     value={formData.result}
                     onChange={(e) => {
                       setFormData({ ...formData, result: e.target.value });
                       if (e.target.value.trim()) setResultError(false);
                     }}
+                    placeholder={language === 'en' ? 'How did this goal end?' : '이 목표의 결과를 기록해주세요'}
                     rows={2}
-                    placeholder="이 목표의 결과를 기록하세요 (예: A사 입사 확정)"
-                    className={cn(resultError && "border-destructive")}
                   />
-                  {resultError && (
-                    <p className="text-xs text-destructive">결과를 입력해주세요.</p>
-                  )}
                   <Button
-                    type="button"
-                    variant="destructive"
+                    variant="secondary"
                     className="w-full"
                     onClick={handleArchive}
                   >
-                    목표 종료 및 기록으로 이동
+                    {t('goals.archiveConfirm')}
                   </Button>
                 </div>
               )}
             </div>
           )}
 
+          {/* Actions */}
           <div className="flex gap-2 pt-2">
             <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
-              취소
+              {t('common.cancel')}
             </Button>
             <Button className="flex-1" onClick={handleSave}>
-              저장
+              {t('goals.save')}
             </Button>
           </div>
         </div>
