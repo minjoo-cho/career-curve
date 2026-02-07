@@ -329,7 +329,7 @@ export function CareerTab() {
                     ) : (
                       <Upload className="w-4 h-4 mr-2" />
                     )}
-                    업로드 (PDF)
+                    {t('career.upload')}
                   </Button>
 
                   <Button 
@@ -339,7 +339,7 @@ export function CareerTab() {
                     onClick={() => setShowResumePreview(true)}
                   >
                     <Eye className="w-4 h-4 mr-2" />
-                    미리보기
+                    {t('career.preview')}
                   </Button>
 
                   <Button 
@@ -350,10 +350,10 @@ export function CareerTab() {
                       setIsExporting(true);
                       try {
                         await exportResumeToDocx({ userName, experiences });
-                        toast.success('이력서가 다운로드되었습니다');
+                        toast.success(t('career.docxDownload'));
                       } catch (err) {
                         console.error('Export error:', err);
-                        toast.error('이력서 추출에 실패했습니다');
+                        toast.error(t('resume.generateFailed'));
                       } finally {
                         setIsExporting(false);
                       }
@@ -364,7 +364,7 @@ export function CareerTab() {
                     ) : (
                       <Download className="w-4 h-4 mr-2" />
                     )}
-                    추출 (DOCX)
+                    {t('career.export')}
                   </Button>
                 </div>
 
@@ -387,9 +387,9 @@ export function CareerTab() {
                           variant={resume.parseStatus === 'success' ? 'default' : 'secondary'}
                           className={cn('text-xs', resume.parseStatus === 'pending' && 'animate-pulse')}
                         >
-                          {resume.parseStatus === 'pending' && '분석 중'}
-                          {resume.parseStatus === 'success' && '완료'}
-                          {resume.parseStatus === 'fail' && '실패'}
+                          {resume.parseStatus === 'pending' && t('career.analyzing')}
+                          {resume.parseStatus === 'success' && t('career.success')}
+                          {resume.parseStatus === 'fail' && t('career.fail')}
                         </Badge>
                         <Button
                           variant="ghost"
@@ -418,7 +418,7 @@ export function CareerTab() {
 
                 {resumes.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-2">
-                    이력서를 업로드하면 자동으로 분석됩니다
+                    {t('career.resumeEmpty')}
                   </p>
                 )}
               </div>
@@ -432,7 +432,7 @@ export function CareerTab() {
             <CollapsibleTrigger className="w-full flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
                 <Briefcase className="w-5 h-5 text-primary" />
-                <h2 className="font-semibold text-foreground">경력</h2>
+                <h2 className="font-semibold text-foreground">{t('career.work')}</h2>
                 <Badge variant="secondary" className="text-xs">{workExperiences.length}</Badge>
               </div>
               {workOpen ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
@@ -451,7 +451,7 @@ export function CareerTab() {
 
                 {workExperiences.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-2">
-                    이력서를 업로드하거나 직접 추가해주세요
+                    {t('career.workEmpty')}
                   </p>
                 )}
 
@@ -462,7 +462,7 @@ export function CareerTab() {
                   onClick={() => handleAddExperience('work')}
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  경력 추가
+                  {t('career.addWork')}
                 </Button>
               </div>
             </CollapsibleContent>
@@ -478,7 +478,7 @@ export function CareerTab() {
             <CollapsibleTrigger className="w-full flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
                 <FolderKanban className="w-5 h-5 text-primary" />
-                <h2 className="font-semibold text-foreground">그 외</h2>
+                <h2 className="font-semibold text-foreground">{t('career.other')}</h2>
                 <Badge variant="secondary" className="text-xs">{projectExperiences.length}</Badge>
               </div>
               {projectOpen ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
@@ -487,7 +487,7 @@ export function CareerTab() {
             <CollapsibleContent>
               <div className="px-4 pb-4 space-y-3">
                 <p className="text-xs text-muted-foreground pb-2">
-                  경력과 별개로 자세히 소개하고 싶은 프로젝트 등을 별도로 자세히 서술해주세요
+                  {t('career.otherDesc')}
                 </p>
                 {projectExperiences.map((exp) => (
                   <ExperienceCard 
@@ -500,7 +500,7 @@ export function CareerTab() {
 
                 {projectExperiences.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-2">
-                    직접 추가해주세요
+                    {t('career.otherEmpty')}
                   </p>
                 )}
 
@@ -511,7 +511,7 @@ export function CareerTab() {
                   onClick={() => handleAddExperience('project')}
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  추가
+                  {t('career.addOther')}
                 </Button>
               </div>
             </CollapsibleContent>
@@ -524,7 +524,7 @@ export function CareerTab() {
             <CollapsibleTrigger className="w-full flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
                 <FileCheck className="w-5 h-5 text-primary" />
-                <h2 className="font-semibold text-foreground">공고별 이력서</h2>
+                <h2 className="font-semibold text-foreground">{t('career.tailored')}</h2>
                 <Badge variant="secondary" className="text-xs">{tailoredResumes.length}</Badge>
               </div>
               {tailoredOpen ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
@@ -547,7 +547,7 @@ export function CareerTab() {
 
                 {tailoredResumes.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-2">
-                    보드에서 공고 카드를 선택 후 &quot;맞춤 이력서 만들기&quot;로 생성할 수 있습니다
+                    {t('career.tailoredEmpty')}
                   </p>
                 )}
               </div>
@@ -586,7 +586,7 @@ export function CareerTab() {
       <Dialog open={!!logResumeId} onOpenChange={(open) => !open && setLogResumeId(null)}>
         <DialogContent className="max-w-[92%] rounded-2xl">
           <DialogHeader>
-            <DialogTitle>이력서 인식 로그</DialogTitle>
+            <DialogTitle>{t('career.parseLog')}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -598,28 +598,28 @@ export function CareerTab() {
             </div>
 
             <div className="space-y-2">
-              <Label>PDF 텍스트(추출 결과)</Label>
+              <Label>{t('career.pdfText')}</Label>
               <Textarea
                 value={logResume?.extractedText ?? ''}
                 readOnly
                 rows={8}
-                placeholder="(비어있으면 PDF에서 텍스트가 추출되지 않은 상태입니다)"
+                placeholder={t('career.pdfEmpty')}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>OCR 텍스트(이미지 인식 결과)</Label>
+              <Label>{t('career.ocrText')}</Label>
               <Textarea
                 value={logResume?.ocrText ?? ''}
                 readOnly
                 rows={8}
-                placeholder="(비어있으면 OCR 인식이 실패한 상태입니다)"
+                placeholder={t('career.ocrEmpty')}
               />
             </div>
 
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setLogResumeId(null)}>
-                닫기
+                {t('common.close')}
               </Button>
             </div>
           </div>
@@ -634,7 +634,7 @@ export function CareerTab() {
         onSave={(content) => {
           if (editingTailoredResume) {
             updateTailoredResume(editingTailoredResume.id, { content });
-            toast.success('이력서가 수정되었습니다');
+            toast.success(t('resume.saved'));
           }
           setEditingTailoredResume(null);
         }}
@@ -657,12 +657,11 @@ export function CareerTab() {
         onExport={async () => {
           setIsExporting(true);
           try {
-            // 기본 이력서는 '표시 이름' 사용
             await exportResumeToDocx({ userName, experiences });
-            toast.success('이력서가 다운로드되었습니다');
+            toast.success(t('career.docxDownload'));
           } catch (err) {
             console.error('Export error:', err);
-            toast.error('이력서 추출에 실패했습니다');
+            toast.error(t('resume.generateFailed'));
           } finally {
             setIsExporting(false);
           }
@@ -676,12 +675,12 @@ export function CareerTab() {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-warning" />
-              새 이력서를 업로드하시겠습니까?
+              {t('career.uploadWarningTitle')}
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
-              <p>새 파일을 업로드하면 <strong>기존 경력 데이터가 삭제</strong>됩니다.</p>
+              <p>{t('career.uploadWarningDesc')}</p>
               <p className="text-sm text-muted-foreground">
-                삭제를 원치 않으신다면, 먼저 현재 상태를 &quot;추출 (DOCX)&quot; 버튼으로 다운로드하세요.
+                {t('career.uploadWarningHint')}
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -690,7 +689,7 @@ export function CareerTab() {
               setPendingFile(null);
               if (fileInputRef.current) fileInputRef.current.value = '';
             }}>
-              취소
+              {t('common.cancel')}
             </AlertDialogCancel>
             <AlertDialogAction onClick={() => {
               if (pendingFile) {
@@ -699,7 +698,7 @@ export function CareerTab() {
               setPendingFile(null);
               setShowUploadWarning(false);
             }}>
-              업로드
+              {t('career.upload')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -721,17 +720,18 @@ function TailoredResumeCard({
   onDelete: () => void;
   userName: string;
 }) {
+  const { t, language } = useLanguage();
   const [isExporting, setIsExporting] = useState(false);
-  const dateStr = new Date(resume.createdAt).toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' }).replace(/\. /g, '.').replace(/\.$/, '');
+  const dateStr = new Date(resume.createdAt).toLocaleDateString(language === 'en' ? 'en-US' : 'ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' }).replace(/\. /g, '.').replace(/\.$/, '');
 
   const handleDownload = async () => {
     setIsExporting(true);
     try {
       await exportTailoredResumeToDocx(resume, userName);
-      toast.success('이력서가 다운로드되었습니다');
+      toast.success(t('career.docxDownload'));
     } catch (err) {
       console.error('Export error:', err);
-      toast.error('다운로드에 실패했습니다');
+      toast.error(t('resume.generateFailed'));
     } finally {
       setIsExporting(false);
     }
@@ -750,19 +750,19 @@ function TailoredResumeCard({
             </h3>
             {isNew && (
               <Badge variant="default" className="text-[10px] bg-primary text-primary-foreground shrink-0">
-                New!
+                {t('common.new')}
               </Badge>
             )}
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span>{dateStr}</span>
             <Badge variant="outline" className="text-[10px]">
-              {resume.language === 'ko' ? '국문' : '영문'}
+              {resume.language === 'ko' ? t('common.korean') : t('common.english')}
             </Badge>
           </div>
         </div>
         <div className="flex gap-1">
-          <Button variant="ghost" size="icon" className="w-7 h-7" onClick={onPreview} title="미리보기">
+          <Button variant="ghost" size="icon" className="w-7 h-7" onClick={onPreview} title={t('common.preview')}>
             <Eye className="w-3.5 h-3.5" />
           </Button>
           <Button 
@@ -771,14 +771,14 @@ function TailoredResumeCard({
             className="w-7 h-7" 
             onClick={handleDownload}
             disabled={isExporting}
-            title="다운로드"
+            title={t('common.download')}
           >
             {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
           </Button>
-          <Button variant="ghost" size="icon" className="w-7 h-7 opacity-0 group-hover:opacity-100 transition-opacity" onClick={onEdit} title="편집">
+          <Button variant="ghost" size="icon" className="w-7 h-7 opacity-0 group-hover:opacity-100 transition-opacity" onClick={onEdit} title={t('common.edit')}>
             <Edit2 className="w-3.5 h-3.5" />
           </Button>
-          <Button variant="ghost" size="icon" className="w-7 h-7 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={onDelete} title="삭제">
+          <Button variant="ghost" size="icon" className="w-7 h-7 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={onDelete} title={t('common.delete')}>
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -791,6 +791,7 @@ function TailoredResumeCard({
 }
 
 function ExperienceCard({ experience, onEdit, onDelete }: { experience: Experience; onEdit: () => void; onDelete: () => void }) {
+  const { t } = useLanguage();
   return (
     <div className="bg-secondary/30 rounded-lg p-3 group">
       <div className="flex items-start justify-between mb-2">
@@ -822,7 +823,7 @@ function ExperienceCard({ experience, onEdit, onDelete }: { experience: Experien
           </li>
         ))}
         {experience.bullets.length > 3 && (
-          <li className="text-primary text-xs">+{experience.bullets.length - 3}개 더...</li>
+          <li className="text-primary text-xs">+{experience.bullets.length - 3}{t('career.moreBullets')}</li>
         )}
       </ul>
     </div>
@@ -838,6 +839,7 @@ interface ExperienceDialogProps {
 }
 
 function ExperienceDialog({ open, onOpenChange, experience, defaultType, onSave }: ExperienceDialogProps) {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     type: experience?.type || defaultType,
     title: experience?.title || '',
@@ -892,65 +894,67 @@ function ExperienceDialog({ open, onOpenChange, experience, defaultType, onSave 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[90%] rounded-2xl">
         <DialogHeader>
-          <DialogTitle>{experience ? '수정' : formData.type === 'work' ? '경력 추가' : '프로젝트 추가'}</DialogTitle>
+          <DialogTitle>
+            {experience ? t('career.edit') : formData.type === 'work' ? t('career.addWork') : t('career.addOther')}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
           <div className="space-y-2">
-            <Label>유형</Label>
+            <Label>{t('career.type')}</Label>
             <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v as ExperienceType })}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="work">경력</SelectItem>
-                <SelectItem value="project">프로젝트</SelectItem>
+                <SelectItem value="work">{t('career.workExp')}</SelectItem>
+                <SelectItem value="project">{t('career.project')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="expTitle">제목</Label>
+            <Label htmlFor="expTitle">{t('career.titleLabel')}</Label>
             <Input
               id="expTitle"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder={formData.type === 'work' ? '예: 시니어 프론트엔드 개발자' : '예: 커머스 플랫폼 개발'}
+              placeholder={formData.type === 'work' ? t('career.titlePlaceholder') : t('career.titleProjectPlaceholder')}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="expCompany">{formData.type === 'work' ? '회사' : '조직/팀'}</Label>
+            <Label htmlFor="expCompany">{formData.type === 'work' ? t('career.company') : t('career.organization')}</Label>
             <Input
               id="expCompany"
               value={formData.company}
               onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-              placeholder="예: 스타트업 ABC"
+              placeholder={t('career.companyPlaceholder')}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="expPeriod">기간</Label>
+            <Label htmlFor="expPeriod">{t('career.period')}</Label>
             <Input
               id="expPeriod"
               value={formData.period}
               onChange={(e) => setFormData({ ...formData, period: e.target.value })}
-              placeholder="예: 2022.01 - 2023.12"
+              placeholder={t('career.periodPlaceholder')}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="expDesc">설명</Label>
+            <Label htmlFor="expDesc">{t('career.description')}</Label>
             <Input
               id="expDesc"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="역할에 대한 간단한 설명"
+              placeholder={t('career.descPlaceholder')}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="expBullets">주요 성과</Label>
+            <Label htmlFor="expBullets">{t('career.bullets')}</Label>
             <div className="space-y-2">
               {(formData.bullets || '').split('\n').map((bullet, idx, arr) => (
                 <div key={idx} className="flex items-start gap-2">
@@ -962,7 +966,7 @@ function ExperienceDialog({ open, onOpenChange, experience, defaultType, onSave 
                       newBullets[idx] = e.target.value;
                       setFormData({ ...formData, bullets: newBullets.join('\n') });
                     }}
-                    placeholder="성과를 입력하세요"
+                    placeholder={t('career.bulletPlaceholder')}
                     className="flex-1"
                   />
                   <Button
@@ -985,17 +989,17 @@ function ExperienceDialog({ open, onOpenChange, experience, defaultType, onSave 
                 onClick={() => setFormData({ ...formData, bullets: formData.bullets ? formData.bullets + '\n' : '' })}
               >
                 <Plus className="w-4 h-4 mr-2" />
-                성과 추가
+                {t('career.addBullet')}
               </Button>
             </div>
           </div>
 
           <div className="flex gap-2 pt-2">
             <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
-              취소
+              {t('common.cancel')}
             </Button>
             <Button className="flex-1" onClick={handleSave}>
-              저장
+              {t('common.save')}
             </Button>
           </div>
         </div>
@@ -1015,6 +1019,7 @@ function TailoredResumePreviewDialog({
   onOpenChange: (open: boolean) => void;
   userNames: { ko: string; en: string; display: string };
 }) {
+  const { t, language } = useLanguage();
   const [isExporting, setIsExporting] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
 
@@ -1027,10 +1032,10 @@ function TailoredResumePreviewDialog({
         ? (userNames.en || userNames.display || 'Name')
         : (userNames.ko || userNames.display || '이름');
       await exportTailoredResumeToDocx(resume, chosenNameDownload, format);
-      toast.success('이력서가 다운로드되었습니다');
+      toast.success(t('career.docxDownload'));
     } catch (err) {
       console.error('Export error:', err);
-      toast.error('다운로드에 실패했습니다');
+      toast.error(t('resume.generateFailed'));
     } finally {
       setIsExporting(false);
     }
@@ -1064,10 +1069,10 @@ function TailoredResumePreviewDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="w-5 h-5" />
-              이력서 미리보기
+              {t('career.previewResume')}
             </DialogTitle>
             <DialogDescription>
-              {resume.companyName} - {resume.jobTitle} ({resume.language === 'en' ? '컨설팅형' : '서술형'})
+              {resume.companyName} - {resume.jobTitle} ({resume.language === 'en' ? 'Consulting' : language === 'en' ? 'Narrative' : '서술형'})
             </DialogDescription>
           </DialogHeader>
           
@@ -1091,7 +1096,7 @@ function TailoredResumePreviewDialog({
                   onClick={() => setShowFeedback(true)}
                 >
                   <MessageSquare className="w-4 h-4 mr-2" />
-                  AI 피드백 보기
+                  {t('career.viewAiFeedback')}
                 </Button>
               )}
               <Button 
@@ -1099,11 +1104,11 @@ function TailoredResumePreviewDialog({
                 className="flex-1" 
                 onClick={() => onOpenChange(false)}
               >
-                닫기
+                {t('common.close')}
               </Button>
               <Button className="flex-1" onClick={handleDownload} disabled={isExporting}>
                 {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-                DOCX 다운로드
+                {t('career.docxDownload')}
               </Button>
             </div>
           </div>
@@ -1116,7 +1121,7 @@ function TailoredResumePreviewDialog({
           <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5 text-primary" />
-              채용담당자 관점 AI 피드백
+              {t('career.aiFeedbackTitle')}
             </DialogTitle>
             <DialogDescription>
               {resume.companyName} - {resume.jobTitle}
@@ -1125,7 +1130,7 @@ function TailoredResumePreviewDialog({
           
           <div className="flex-1 overflow-y-auto min-h-0 space-y-3 pr-1">
             <div className="rounded-lg border border-border bg-warning/10 text-warning p-3 text-xs leading-relaxed">
-              이 과정에서 왜곡, 과장되는 내용이 있을 수 있으니, 스크리닝은 필수입니다!
+              {t('career.aiFeedbackWarning')}
             </div>
 
             <FeedbackSplitView content={resume.aiFeedback || ''} />
@@ -1133,7 +1138,7 @@ function TailoredResumePreviewDialog({
 
           <div className="shrink-0 pt-3">
             <Button variant="outline" className="w-full" onClick={() => setShowFeedback(false)}>
-              이력서로 돌아가기
+              {t('career.backToResume')}
             </Button>
           </div>
         </DialogContent>
@@ -1153,6 +1158,7 @@ function TailoredResumeEditDialog({
   onOpenChange: (open: boolean) => void; 
   onSave: (content: string) => void;
 }) {
+  const { t } = useLanguage();
   const [content, setContent] = useState(resume?.content || '');
 
   // Reset when resume changes
@@ -1164,7 +1170,7 @@ function TailoredResumeEditDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[92%] max-h-[80vh] rounded-2xl flex flex-col">
         <DialogHeader>
-          <DialogTitle>공고별 이력서 편집</DialogTitle>
+          <DialogTitle>{t('career.tailoredEdit')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 flex-1 overflow-hidden flex flex-col">
           {resume && (
@@ -1176,14 +1182,14 @@ function TailoredResumeEditDialog({
             value={content}
             onChange={(e) => setContent(e.target.value)}
             className="flex-1 min-h-[300px] resize-none"
-            placeholder="이력서 내용..."
+            placeholder={t('career.description')}
           />
           <div className="flex gap-2">
             <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
-              취소
+              {t('common.cancel')}
             </Button>
             <Button className="flex-1" onClick={() => onSave(content)}>
-              저장
+              {t('common.save')}
             </Button>
           </div>
         </div>
