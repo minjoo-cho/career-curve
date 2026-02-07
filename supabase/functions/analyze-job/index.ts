@@ -12,8 +12,28 @@ const requestSchema = z.object({
   url: z.string().min(1).max(2000),
 });
 
-// Allowlisted job board domains for URL validation
-const ALLOWED_DOMAINS = [
+// Common job-related URL patterns that indicate a career page
+const JOB_URL_PATTERNS = [
+  /\/career/i,
+  /\/careers/i,
+  /\/jobs?/i,
+  /\/hiring/i,
+  /\/recruit/i,
+  /\/채용/,
+  /\/apply/i,
+  /\/positions?/i,
+  /\/opportunities?/i,
+  /\/openings?/i,
+  /\/vacancies?/i,
+  /\/work-with-us/i,
+  /\/join-us/i,
+  /\/join-our-team/i,
+  /job[-_]?id/i,
+  /position[-_]?id/i,
+];
+
+// Known job board domains (these are always allowed regardless of URL pattern)
+const KNOWN_JOB_BOARDS = [
   'linkedin.com',
   'indeed.com',
   'glassdoor.com',
@@ -55,9 +75,9 @@ const ALLOWED_DOMAINS = [
  * Validates a URL to prevent SSRF attacks
  * - Only allows HTTPS/HTTP protocols
  * - Blocks private IP ranges and localhost
- * - Checks against allowlisted job board domains
+ * - Allows known job boards OR URLs with job-related patterns
  */
-function validateUrl(urlString: string): { valid: boolean; error?: string; url?: string } {
+function validateUrl(urlString: string): { valid: boolean; error?: string; url?: string; mayNotBeJob?: boolean } {
   try {
     // Add protocol if missing
     const formattedUrl = urlString.trim().startsWith('http') 
@@ -91,17 +111,30 @@ function validateUrl(urlString: string): { valid: boolean; error?: string; url?:
       return { valid: false, error: '유효하지 않은 URL입니다.' };
     }
     
-    // Check if domain is in allowlist
-    const isAllowed = ALLOWED_DOMAINS.some(allowed => 
-      hostname === allowed || hostname.endsWith('.' + allowed)
+    // URL length check
+    if (formattedUrl.length > 2000) {
+      return { valid: false, error: 'URL이 너무 깁니다.' };
+    }
+    
+    // Check if it's a known job board (always allowed)
+    const isKnownJobBoard = KNOWN_JOB_BOARDS.some(domain => 
+      hostname === domain || hostname.endsWith('.' + domain)
     );
     
-    if (!isAllowed) {
-      return { 
-        valid: false, 
-        error: '지원되지 않는 사이트입니다. LinkedIn, 잡코리아, 사람인, 원티드 등 주요 채용 사이트의 URL을 입력해주세요.' 
-      };
+    if (isKnownJobBoard) {
+      return { valid: true, url: formattedUrl };
     }
+    
+    // Check if URL has job-related patterns (company career pages)
+    const fullUrl = formattedUrl.toLowerCase();
+    const hasJobPattern = JOB_URL_PATTERNS.some(pattern => pattern.test(fullUrl));
+    
+    if (hasJobPattern) {
+      return { valid: true, url: formattedUrl };
+    }
+    
+    // URL is valid but may not be a job posting - let the frontend handle this
+    return { valid: true, url: formattedUrl, mayNotBeJob: true };
     
     // URL length check (already validated by Zod, but double-check)
     if (formattedUrl.length > 2000) {
