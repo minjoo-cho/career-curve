@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { JobPosting, JobStatus, STATUS_LABELS, STATUS_COLORS, PRIORITY_LABELS } from '@/types/job';
+import { JobPosting, JobStatus, STATUS_LABELS, BuiltInJobStatus, PRIORITY_LABELS, getStatusLabel, getStatusColor } from '@/types/job';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Star, MoreVertical, Trash2, Edit2 } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
+import { useCustomStatuses } from '@/hooks/useCustomStatuses';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,7 +37,10 @@ interface JobCardProps {
 export function JobCard({ job, onClick }: JobCardProps) {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const { removeJobPosting, updateJobPosting } = useData();
+  const { customStatuses } = useCustomStatuses();
 
+  const statusLabel = getStatusLabel(job.status, customStatuses);
+  const statusColor = getStatusColor(job.status, customStatuses);
   const renderStars = (score: number) => {
     return (
       <div className="flex gap-0.5">
@@ -143,8 +147,8 @@ export function JobCard({ job, onClick }: JobCardProps) {
           <div className="flex items-center gap-2">
             {job.fitScore && renderStars(job.fitScore)}
           </div>
-          <Badge className={cn('text-xs shrink-0', STATUS_COLORS[job.status])}>
-            {STATUS_LABELS[job.status]}
+          <Badge className={cn('text-xs shrink-0', statusColor)}>
+            {statusLabel}
           </Badge>
         </div>
       </div>
@@ -167,6 +171,7 @@ interface JobEditDialogProps {
 
 function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
   const { updateJobPosting } = useData();
+  const { customStatuses } = useCustomStatuses();
   const [formData, setFormData] = useState({
     companyName: job.companyName,
     title: job.title,
@@ -229,9 +234,21 @@ function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  {/* Built-in statuses */}
                   {Object.entries(STATUS_LABELS).map(([key, label]) => (
                     <SelectItem key={key} value={key}>{label}</SelectItem>
                   ))}
+                  {/* Custom statuses */}
+                  {customStatuses.length > 0 && (
+                    <>
+                      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground border-t mt-1 pt-2">
+                        사용자 정의
+                      </div>
+                      {customStatuses.map((cs) => (
+                        <SelectItem key={cs.id} value={`custom:${cs.id}`}>{cs.name}</SelectItem>
+                      ))}
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>

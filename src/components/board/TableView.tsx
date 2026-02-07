@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { JobPosting, JobStatus, STATUS_LABELS, STATUS_COLORS, PRIORITY_LABELS } from '@/types/job';
+import { JobPosting, JobStatus, STATUS_LABELS, BuiltInJobStatus, PRIORITY_LABELS, getStatusLabel, getStatusColor } from '@/types/job';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useData } from '@/contexts/DataContext';
+import { useCustomStatuses } from '@/hooks/useCustomStatuses';
 import { JobDetailDialog } from './JobDetailDialog';
 import {
   Select,
@@ -50,6 +51,7 @@ const DEFAULT_COLUMNS = [
 
 export function TableView({ jobs }: TableViewProps) {
   const { updateJobPosting, jobPostings } = useData();
+  const { customStatuses } = useCustomStatuses();
   const [columns, setColumns] = useState(DEFAULT_COLUMNS);
   const [sortKey, setSortKey] = useState<SortKey>('priority');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -113,8 +115,8 @@ export function TableView({ jobs }: TableViewProps) {
           onValueChange={(v) => updateJobPosting(job.id, { status: v as JobStatus })}
         >
           <SelectTrigger className="h-7 w-24 text-xs border-none bg-transparent p-0">
-            <Badge className={cn('text-[10px]', STATUS_COLORS[job.status])}>
-              {STATUS_LABELS[job.status]}
+            <Badge className={cn('text-[10px]', getStatusColor(job.status, customStatuses))}>
+              {getStatusLabel(job.status, customStatuses)}
             </Badge>
           </SelectTrigger>
           <SelectContent>
@@ -123,6 +125,19 @@ export function TableView({ jobs }: TableViewProps) {
                 {label}
               </SelectItem>
             ))}
+            {/* Custom statuses */}
+            {customStatuses.length > 0 && (
+              <>
+                <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground border-t mt-1 pt-2">
+                  사용자 정의
+                </div>
+                {customStatuses.map((cs) => (
+                  <SelectItem key={cs.id} value={`custom:${cs.id}`} className="text-xs">
+                    {cs.name}
+                  </SelectItem>
+                ))}
+              </>
+            )}
           </SelectContent>
         </Select>
       );

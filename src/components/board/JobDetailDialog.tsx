@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { JobPosting, JobStatus, STATUS_LABELS, STATUS_COLORS, KeyCompetency, CompanyCriteriaScore, MinimumRequirementsCheck } from '@/types/job';
+import { JobPosting, JobStatus, STATUS_LABELS, BuiltInJobStatus, KeyCompetency, CompanyCriteriaScore, MinimumRequirementsCheck, getStatusLabel, getStatusColor } from '@/types/job';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useData } from '@/contexts/DataContext';
+import { useCustomStatuses } from '@/hooks/useCustomStatuses';
 import {
   Dialog,
   DialogContent,
@@ -60,6 +61,7 @@ interface JobDetailDialogProps {
 
 export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }: JobDetailDialogProps) {
   const { updateJobPosting, currentGoals, experiences, jobPostings } = useData();
+  const { customStatuses } = useCustomStatuses();
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [isStep1Open, setIsStep1Open] = useState(false);
   const [isStep2Open, setIsStep2Open] = useState(false);
@@ -296,11 +298,24 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {(['reviewing', 'applied', 'interview', 'offer', 'rejected-docs', 'rejected-interview', 'accepted', 'closed'] as JobStatus[]).map((key) => (
+                    {(['reviewing', 'applied', 'interview', 'offer', 'rejected-docs', 'rejected-interview', 'accepted', 'closed'] as BuiltInJobStatus[]).map((key) => (
                       <SelectItem key={key} value={key}>
-                        <Badge className={cn('text-xs', STATUS_COLORS[key])}>{STATUS_LABELS[key]}</Badge>
+                        <Badge className={cn('text-xs', getStatusColor(key, customStatuses))}>{STATUS_LABELS[key]}</Badge>
                       </SelectItem>
                     ))}
+                    {/* Custom statuses */}
+                    {customStatuses.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground border-t mt-1 pt-2">
+                          사용자 정의
+                        </div>
+                        {customStatuses.map((cs) => (
+                          <SelectItem key={cs.id} value={`custom:${cs.id}`}>
+                            <Badge className={cn('text-xs', getStatusColor(`custom:${cs.id}`, customStatuses))}>{cs.name}</Badge>
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
