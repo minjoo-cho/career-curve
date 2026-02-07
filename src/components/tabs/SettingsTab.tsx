@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, ChevronRight, FileText, Shield, Globe } from 'lucide-react';
+import { User, ChevronRight, FileText, Shield, Globe, Zap, Crown } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { AccountSheet } from '@/components/settings/AccountSheet';
+import { PricingSheet } from '@/components/settings/PricingSheet';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -15,9 +18,10 @@ import {
 
 export function SettingsTab() {
   const navigate = useNavigate();
-  const { jobPostings, currentGoals } = useData();
+  const { jobPostings, currentGoals, subscription } = useData();
   const { language, setLanguage, t } = useLanguage();
   const [accountOpen, setAccountOpen] = useState(false);
+  const [pricingOpen, setPricingOpen] = useState(false);
   const currentGoal = currentGoals[0] ?? null;
 
   const interviewCount = jobPostings.filter(j => j.status === 'interview').length;
@@ -26,6 +30,12 @@ export function SettingsTab() {
   const daysSinceGoal = start 
     ? Math.floor((Date.now() - start.getTime()) / (1000 * 60 * 60 * 24))
     : 0;
+
+  // Credit usage
+  const totalCredits = (subscription?.aiCreditsRemaining ?? 0) + (subscription?.aiCreditsUsed ?? 0);
+  const usedCredits = subscription?.aiCreditsUsed ?? 0;
+  const remainingCredits = subscription?.aiCreditsRemaining ?? 0;
+  const usagePercentage = totalCredits > 0 ? (usedCredits / totalCredits) * 100 : 0;
 
   return (
     <div className="flex flex-col h-full">
@@ -52,6 +62,46 @@ export function SettingsTab() {
             <div>
               <p className="text-xl font-bold text-primary">{interviewCount}</p>
               <p className="text-xs text-muted-foreground">{t('settings.interview')}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Credits Card - Lovable style */}
+        <div 
+          className="bg-card rounded-xl border border-border p-4 cursor-pointer hover:bg-secondary/30 transition-colors"
+          onClick={() => setPricingOpen(true)}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-primary" />
+              <span className="text-sm font-medium text-foreground">{t('settings.credits')}</span>
+            </div>
+            <Badge variant="secondary" className="text-xs">
+              {subscription?.planDisplayName || 'Free'}
+            </Badge>
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">{t('settings.creditsRemaining')}</span>
+              <span className="font-semibold text-foreground">
+                {remainingCredits} / {totalCredits}
+              </span>
+            </div>
+            <Progress value={100 - usagePercentage} className="h-2" />
+          </div>
+          
+          <div className="flex items-center justify-between mt-3">
+            <span className="text-xs text-muted-foreground">
+              {language === 'en' 
+                ? `${usedCredits} credits used`
+                : `${usedCredits}개 사용됨`
+              }
+            </span>
+            <div className="flex items-center gap-1 text-primary text-xs font-medium">
+              <Crown className="w-3.5 h-3.5" />
+              {t('settings.viewPricing')}
+              <ChevronRight className="w-3.5 h-3.5" />
             </div>
           </div>
         </div>
@@ -87,6 +137,7 @@ export function SettingsTab() {
       </div>
 
       <AccountSheet open={accountOpen} onOpenChange={setAccountOpen} />
+      <PricingSheet open={pricingOpen} onOpenChange={setPricingOpen} />
     </div>
   );
 }
@@ -105,4 +156,3 @@ function MenuItem({ icon: Icon, label, onClick }: { icon: typeof User; label: st
     </button>
   );
 }
-

@@ -1,4 +1,4 @@
-import { Check, Crown, Sparkles, ShieldCheck } from 'lucide-react';
+import { Check, Crown, Sparkles, ShieldCheck, Zap } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -7,7 +7,9 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { useData } from '@/contexts/DataContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 
 interface PricingSheetProps {
@@ -16,37 +18,32 @@ interface PricingSheetProps {
 }
 
 export function PricingSheet({ open, onOpenChange }: PricingSheetProps) {
-  const { subscription, plans, jobPostings } = useData();
-  
-  const currentJobCount = jobPostings?.length || 0;
+  const { subscription, plans } = useData();
+  const { t, language } = useLanguage();
 
   // Plan feature descriptions
   const planFeatures = {
     free: [
-      { label: '채팅 공고 분석', value: '5개' },
-      { label: '공고 저장', value: '5개' },
-      { label: 'AI 적합도 평가', value: '3개' },
-      { label: '맞춤 이력서 생성', value: '1개' },
+      { label: t('pricing.aiFeatures'), value: language === 'en' ? '5x' : '5회' },
     ],
     starter: [
-      { label: '채팅 공고 분석', value: '30개' },
-      { label: '공고 저장', value: '30개' },
-      { label: 'AI 적합도 평가', value: '20개' },
-      { label: '맞춤 이력서 생성', value: '10개' },
+      { label: t('pricing.aiFeatures'), value: language === 'en' ? '25x' : '25회' },
     ],
     pro: [
-      { label: '채팅 공고 분석', value: '무제한' },
-      { label: '공고 저장', value: '무제한' },
-      { label: 'AI 적합도 평가', value: '50개' },
-      { label: '맞춤 이력서 생성', value: '30개' },
+      { label: t('pricing.aiFeatures'), value: language === 'en' ? '50x' : '50회' },
     ],
   };
 
   const planPrices = {
-    free: { price: 0, label: '무료' },
+    free: { price: 0, label: t('pricing.free') },
     starter: { price: 9900, label: '₩9,900' },
-    pro: { price: 19900, label: '₩19,900' },
+    pro: { price: 14900, label: '₩14,900' },
   };
+
+  const totalCredits = (subscription?.aiCreditsRemaining ?? 0) + (subscription?.aiCreditsUsed ?? 0);
+  const usedCredits = subscription?.aiCreditsUsed ?? 0;
+  const remainingCredits = subscription?.aiCreditsRemaining ?? 0;
+  const usagePercentage = totalCredits > 0 ? (usedCredits / totalCredits) * 100 : 0;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -54,38 +51,37 @@ export function PricingSheet({ open, onOpenChange }: PricingSheetProps) {
         <SheetHeader className="text-left pb-4">
           <SheetTitle className="flex items-center gap-2">
             <Crown className="w-5 h-5 text-primary" />
-            요금제 안내
+            {t('pricing.title')}
           </SheetTitle>
         </SheetHeader>
 
-        {/* Current Usage Status */}
-        <div className="p-4 rounded-xl bg-secondary/50 mb-6">
+        {/* Current Usage Status - Lovable style */}
+        <div className="p-4 rounded-xl bg-gradient-to-br from-primary/10 to-accent mb-6 border border-primary/20">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium">현재 요금제</span>
+            <span className="text-sm font-medium">{t('pricing.currentPlan')}</span>
             <Badge variant="secondary" className="font-medium">
               {subscription?.planDisplayName || 'Free'}
             </Badge>
           </div>
           
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">공고 저장</span>
-              <span className="font-medium">
-                {currentJobCount} / {subscription?.jobLimit === 999999 ? '무제한' : subscription?.jobLimit || 5}개
+          {/* Credit usage bar */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <Zap className="w-4 h-4 text-primary" />
+                {t('settings.aiCredits')}
+              </span>
+              <span className="font-semibold text-foreground">
+                {remainingCredits} / {totalCredits}
               </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">AI 적합도 평가</span>
-              <span className="font-medium">
-                {subscription?.aiCreditsRemaining ?? 0}개 남음
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">맞춤 이력서 생성</span>
-              <span className="font-medium">
-                {subscription?.resumeCreditsRemaining ?? 0}개 남음
-              </span>
-            </div>
+            <Progress value={100 - usagePercentage} className="h-2" />
+            <p className="text-xs text-muted-foreground">
+              {language === 'en' 
+                ? `${remainingCredits} credits remaining`
+                : `${remainingCredits}개 크레딧 남음`
+              }
+            </p>
           </div>
         </div>
 
@@ -113,7 +109,7 @@ export function PricingSheet({ open, onOpenChange }: PricingSheetProps) {
                   <div className="absolute -top-2.5 left-4">
                     <Badge className="bg-primary text-primary-foreground text-xs">
                       <Sparkles className="w-3 h-3 mr-1" />
-                      추천
+                      {t('pricing.recommended')}
                     </Badge>
                   </div>
                 )}
@@ -123,12 +119,12 @@ export function PricingSheet({ open, onOpenChange }: PricingSheetProps) {
                     <h3 className="font-semibold capitalize">{planKey}</h3>
                     <p className="text-2xl font-bold">
                       {priceInfo.label}
-                      {priceInfo.price > 0 && <span className="text-sm font-normal text-muted-foreground">/월</span>}
+                      {priceInfo.price > 0 && <span className="text-sm font-normal text-muted-foreground">{t('pricing.monthly')}</span>}
                     </p>
                   </div>
                   {isCurrentPlan && (
                     <Badge variant="outline" className="text-primary border-primary">
-                      현재 플랜
+                      {t('pricing.currentPlanBadge')}
                     </Badge>
                   )}
                 </div>
@@ -143,10 +139,17 @@ export function PricingSheet({ open, onOpenChange }: PricingSheetProps) {
                       <span className="font-medium text-muted-foreground">{feature.value}</span>
                     </li>
                   ))}
+                  <li className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                      {t('pricing.chatAnalysis')}
+                    </span>
+                    <span className="font-medium text-muted-foreground">{t('pricing.unlimited')}</span>
+                  </li>
                   {planKey !== 'free' && (
                     <li className="flex items-center gap-2 text-sm pt-1">
                       <ShieldCheck className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span>전화번호 인증 필수</span>
+                      <span>{t('pricing.phoneVerification')}</span>
                     </li>
                   )}
                 </ul>
@@ -158,8 +161,8 @@ export function PricingSheet({ open, onOpenChange }: PricingSheetProps) {
                     disabled
                   >
                     {priceInfo.price > (planPrices[subscription?.planName as keyof typeof planPrices]?.price ?? 0)
-                      ? '업그레이드 (준비중)' 
-                      : '선택하기 (준비중)'}
+                      ? t('pricing.upgrade')
+                      : t('pricing.select')}
                   </Button>
                 )}
               </div>
@@ -169,10 +172,10 @@ export function PricingSheet({ open, onOpenChange }: PricingSheetProps) {
 
         <div className="mt-6 space-y-2">
           <p className="text-xs text-muted-foreground text-center">
-            결제 기능은 곧 출시됩니다. 현재는 무료 플랜을 이용해주세요.
+            {t('pricing.paymentSoon')}
           </p>
           <p className="text-xs text-muted-foreground text-center">
-            AI 기능 사용 시 전화번호 인증이 필요하며, 무료 악용 방지 목적으로만 사용됩니다.
+            {t('pricing.phoneRequired')}
           </p>
         </div>
       </SheetContent>

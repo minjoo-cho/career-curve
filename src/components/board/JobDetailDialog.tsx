@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { JobPosting, JobStatus, STATUS_LABELS, BuiltInJobStatus, KeyCompetency, CompanyCriteriaScore, MinimumRequirementsCheck, getStatusLabel, getStatusColor } from '@/types/job';
+import { JobPosting, JobStatus, STATUS_LABELS, STATUS_LABELS_EN, BuiltInJobStatus, KeyCompetency, CompanyCriteriaScore, MinimumRequirementsCheck, getStatusLabel, getStatusColor } from '@/types/job';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,11 +63,14 @@ interface JobDetailDialogProps {
 export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }: JobDetailDialogProps) {
   const { updateJobPosting, currentGoals, experiences, jobPostings } = useData();
   const { customStatuses } = useCustomStatuses();
+  const { t, language } = useLanguage();
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [isStep1Open, setIsStep1Open] = useState(false);
   const [isStep2Open, setIsStep2Open] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [isResumeBuilderOpen, setIsResumeBuilderOpen] = useState(false);
+  
+  const statusLabels = language === 'en' ? STATUS_LABELS_EN : STATUS_LABELS;
   const [editingEvaluation, setEditingEvaluation] = useState<number | null>(null);
   const [editEvalText, setEditEvalText] = useState('');
   
@@ -291,7 +295,7 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
               {/* 지원 상태 */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold">지원 상태</span>
+                  <span className="text-sm font-semibold">{t('jobDetail.applicationStatus')}</span>
                 </div>
                 <Select value={job.status} onValueChange={(v) => handleStatusChange(v as JobStatus)}>
                   <SelectTrigger className="w-full">
@@ -300,14 +304,14 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
                   <SelectContent>
                     {(['reviewing', 'applied', 'interview', 'offer', 'rejected-docs', 'rejected-interview', 'accepted', 'closed'] as BuiltInJobStatus[]).map((key) => (
                       <SelectItem key={key} value={key}>
-                        <Badge className={cn('text-xs', getStatusColor(key, customStatuses))}>{STATUS_LABELS[key]}</Badge>
+                        <Badge className={cn('text-xs', getStatusColor(key, customStatuses))}>{statusLabels[key]}</Badge>
                       </SelectItem>
                     ))}
                     {/* Custom statuses */}
                     {customStatuses.length > 0 && (
                       <>
                         <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground border-t mt-1 pt-2">
-                          사용자 정의
+                          {t('status.custom')}
                         </div>
                         {customStatuses.map((cs) => (
                           <SelectItem key={cs.id} value={`custom:${cs.id}`}>
@@ -326,7 +330,7 @@ export function JobDetailDialog({ job, open, onOpenChange, onNavigateToCareer }:
                   <Button variant="ghost" className="w-full justify-between px-0 h-auto py-2">
                     <div className="flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-primary" />
-                      <span className="text-sm font-semibold">공고 요약</span>
+                      <span className="text-sm font-semibold">{t('jobDetail.jobSummary')}</span>
                     </div>
                     <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', isSummaryOpen && 'rotate-180')} />
                   </Button>

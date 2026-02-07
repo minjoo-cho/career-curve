@@ -145,7 +145,7 @@ export interface ChatMessage {
   createdAt: Date;
 }
 
-// Status labels in Korean (for built-in statuses)
+// Status labels - localized versions
 export const STATUS_LABELS: Record<BuiltInJobStatus, string> = {
   'reviewing': '지원검토',
   'applied': '서류지원',
@@ -157,14 +157,26 @@ export const STATUS_LABELS: Record<BuiltInJobStatus, string> = {
   'closed': '공고 마감',
 };
 
+export const STATUS_LABELS_EN: Record<BuiltInJobStatus, string> = {
+  'reviewing': 'Reviewing',
+  'applied': 'Applied',
+  'interview': 'Interview',
+  'rejected-docs': 'Rejected (Docs)',
+  'rejected-interview': 'Rejected (Interview)',
+  'offer': 'Offer',
+  'accepted': 'Accepted',
+  'closed': 'Closed',
+};
+
 // Helper function to get status label (handles custom statuses)
-export function getStatusLabel(status: JobStatus, customStatuses?: { id: string; name: string }[]): string {
+export function getStatusLabel(status: JobStatus, customStatuses?: { id: string; name: string }[], language: 'ko' | 'en' = 'ko'): string {
   if (status.startsWith('custom:')) {
     const customId = status.replace('custom:', '');
     const found = customStatuses?.find(s => s.id === customId);
-    return found?.name || '사용자 정의';
+    return found?.name || (language === 'en' ? 'Custom' : '사용자 정의');
   }
-  return STATUS_LABELS[status as BuiltInJobStatus] || status;
+  const labels = language === 'en' ? STATUS_LABELS_EN : STATUS_LABELS;
+  return labels[status as BuiltInJobStatus] || status;
 }
 
 // Status colors (for built-in statuses)
@@ -207,4 +219,13 @@ export const PRIORITY_LABELS: Record<number, string> = {
   3: '보통',
   4: '낮음',
   5: '관심',
+};
+
+export const PRIORITY_LABELS_EN: Record<number, string> = {
+  0: 'Not evaluated',
+  1: 'Top Priority',
+  2: 'High',
+  3: 'Normal',
+  4: 'Low',
+  5: 'Watching',
 };

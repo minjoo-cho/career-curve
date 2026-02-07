@@ -121,30 +121,57 @@ export function useSubscription() {
     fetchSubscription();
   }, [fetchSubscription]);
 
-  // Check if user can add more jobs - always allow (no limits)
+  // Check if user can add more jobs - no job limit enforced
   const canAddJob = useCallback((currentJobCount: number) => {
     return true; // No job limit
   }, []);
 
-  // Check if user has AI credits - always allow (no limits)
+  // Check if user has AI credits
   const hasAiCredits = useCallback(() => {
-    return true; // No AI credit limit
-  }, []);
+    if (!subscription) return false;
+    return subscription.aiCreditsRemaining > 0;
+  }, [subscription]);
 
-  // Check if user has resume generation credits - always allow (no limits)
+  // Check if user has resume generation credits (uses same credits as AI now)
   const hasResumeCredits = useCallback(() => {
-    return true; // No resume credit limit
-  }, []);
+    if (!subscription) return false;
+    return subscription.aiCreditsRemaining > 0;
+  }, [subscription]);
 
-  // Use AI credit - always succeed (no limits)
+  // Use AI credit - deduct locally (actual deduction in edge function)
   const useAiCredit = useCallback(async (amount: number = 1) => {
-    return true; // Always succeed, no credit tracking
-  }, []);
+    if (!subscription || !user) return false;
+    if (subscription.aiCreditsRemaining < amount) return false;
+    
+    try {
+      const { error } = await supabase
+        .from('user_subscriptions')
+        .update({
+          ai_credits_remaining: subscription.aiCreditsRemaining - amount,
+          ai_credits_used: subscription.aiCreditsUsed + amount,
+        })
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setSubscription(prev => prev ? {
+        ...prev,
+        aiCreditsRemaining: prev.aiCreditsRemaining - amount,
+        aiCreditsUsed: prev.aiCreditsUsed + amount,
+      } : null);
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to use AI credit:', error);
+      return false;
+    }
+  }, [subscription, user]);
 
-  // Use resume credit - always succeed (no limits)
+  // Use resume credit - now uses same AI credits pool
   const useResumeCredit = useCallback(async (amount: number = 1) => {
-    return true; // Always succeed, no credit tracking
-  }, []);
+    return useAiCredit(amount);
+  }, [useAiCredit]);
 
   return {
     isLoading,
