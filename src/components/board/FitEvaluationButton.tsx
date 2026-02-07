@@ -31,10 +31,19 @@ export function FitEvaluationButton({ keyCompetencies, experiences, minExperienc
 
     setIsLoading(true);
     try {
+      // Filter out experiences with empty titles
+      const validExperiences = experiences.filter(exp => exp.title && exp.title.trim().length > 0);
+      
+      if (validExperiences.length === 0) {
+        toast.error('유효한 경험이 없습니다. 경력 탭에서 경험을 추가해주세요.');
+        setIsLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('evaluate-fit', {
         body: {
           keyCompetencies,
-          experiences,
+          experiences: validExperiences,
           minExperience,
         }
       });
