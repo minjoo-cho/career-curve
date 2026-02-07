@@ -467,13 +467,16 @@ export function CareerTab() {
           </div>
         </Collapsible>
 
-        {/* Project Section */}
+        {/* Separator */}
+        <div className="border-t border-border my-4" />
+
+        {/* Other (Project) Section */}
         <Collapsible open={projectOpen} onOpenChange={setProjectOpen}>
           <div className="bg-card rounded-xl border border-border card-shadow overflow-hidden">
             <CollapsibleTrigger className="w-full flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
                 <FolderKanban className="w-5 h-5 text-primary" />
-                <h2 className="font-semibold text-foreground">Selected Projects</h2>
+                <h2 className="font-semibold text-foreground">그 외</h2>
                 <Badge variant="secondary" className="text-xs">{projectExperiences.length}</Badge>
               </div>
               {projectOpen ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
@@ -481,6 +484,9 @@ export function CareerTab() {
             
             <CollapsibleContent>
               <div className="px-4 pb-4 space-y-3">
+                <p className="text-xs text-muted-foreground pb-2">
+                  경력과 별개로 자세히 소개하고 싶은 프로젝트 등을 별도로 자세히 서술해주세요
+                </p>
                 {projectExperiences.map((exp) => (
                   <ExperienceCard 
                     key={exp.id} 
@@ -492,7 +498,7 @@ export function CareerTab() {
 
                 {projectExperiences.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-2">
-                    이력서를 업로드하거나 직접 추가해주세요
+                    직접 추가해주세요
                   </p>
                 )}
 
@@ -503,7 +509,7 @@ export function CareerTab() {
                   onClick={() => handleAddExperience('project')}
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  프로젝트 추가
+                  추가
                 </Button>
               </div>
             </CollapsibleContent>

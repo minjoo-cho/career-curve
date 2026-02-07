@@ -350,7 +350,7 @@ export function ChatTab({ onNavigateToBoard }: ChatTabProps) {
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder="공고 링크를 붙여넣거나 질문하세요"
+            placeholder="공고 링크를 붙여넣으세요. 자동으로 공고를 요약해줍니다"
             className="flex-1 bg-secondary rounded-full px-4 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <Button

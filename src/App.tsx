@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { DataProvider } from "@/contexts/DataContext";
+import { LanguageProvider, useLanguage } from "@/contexts/LanguageContext";
 import { useDeviceFingerprint } from "@/hooks/useDeviceFingerprint";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -19,13 +20,14 @@ const queryClient = new QueryClient();
 
 function AppWithProviders() {
   const { user, isLoading } = useAuth();
+  const { t } = useLanguage();
   // Initialize device fingerprint for logged-in users (abuse detection)
   useDeviceFingerprint();
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">로딩 중...</div>
+        <div className="animate-pulse text-muted-foreground">{t('common.loading')}</div>
       </div>
     );
   }
@@ -56,7 +58,9 @@ function AppWithProviders() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <AppWithProviders />
+      <LanguageProvider>
+        <AppWithProviders />
+      </LanguageProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

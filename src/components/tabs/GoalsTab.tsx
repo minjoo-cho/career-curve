@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Target, Calendar, Edit2, History, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { Target, Calendar, Edit2, History, ChevronDown, ChevronUp, Trash2, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -350,30 +350,22 @@ export function GoalsTab() {
           onSave={(newGoal) => {
             // 새 목표 추가인 경우
             if (isAddingNew && pendingNewGoal) {
-              // 종료일이 입력되면 자동으로 "이전 기록"으로 이동
-              if (newGoal.endDate) {
-                archiveGoal(newGoal);
-                setHistoryOpen(true);
-              } else {
-                addGoal(newGoal);
-              }
+              addGoal(newGoal);
               setPendingNewGoal(null);
               setEditingGoalId(null);
               setIsAddingNew(false);
               return;
             }
 
-            // 기존 목표 수정인 경우
-            if (newGoal.endDate) {
-              archiveGoal(newGoal);
-              removeGoal(newGoal.id);
-              setHistoryOpen(true);
-              setEditingGoalId(null);
-              setIsAddingNew(false);
-              return;
-            }
-
+            // 기존 목표 수정인 경우 - 종료일이 있어도 이전 기록으로 자동 이동하지 않음
             updateGoal(newGoal.id, newGoal);
+            setEditingGoalId(null);
+            setIsAddingNew(false);
+          }}
+          onArchive={(goal) => {
+            archiveGoal(goal);
+            removeGoal(goal.id);
+            setHistoryOpen(true);
             setEditingGoalId(null);
             setIsAddingNew(false);
           }}
@@ -388,9 +380,10 @@ interface GoalsEditDialogProps {
   onOpenChange: (open: boolean) => void;
   goal: CareerGoal;
   onSave: (goal: CareerGoal) => void;
+  onArchive?: (goal: CareerGoal) => void;
 }
 
-function GoalsEditDialog({ open, onOpenChange, goal, onSave }: GoalsEditDialogProps) {
+function GoalsEditDialog({ open, onOpenChange, goal, onSave, onArchive }: GoalsEditDialogProps) {
   const [formData, setFormData] = useState({
     reason: goal.reason,
     careerPath: goal.careerPath || '',
@@ -401,6 +394,8 @@ function GoalsEditDialog({ open, onOpenChange, goal, onSave }: GoalsEditDialogPr
     endDate: goal.endDate ? toDateInputValue(goal.endDate) : '',
   });
   const [resultError, setResultError] = useState(false);
+  const [showArchiveResult, setShowArchiveResult] = useState(false);
+  const [criteriaError, setCriteriaError] = useState(false);
 
   const updateCriteriaWeight = (index: number, weight: number) => {
     const updated = [...formData.companyEvalCriteria];
@@ -420,15 +415,20 @@ function GoalsEditDialog({ open, onOpenChange, goal, onSave }: GoalsEditDialogPr
     setFormData({ ...formData, companyEvalCriteria: updated });
   };
 
+  // Check if at least one company criteria has a name
+  const hasValidCriteria = formData.companyEvalCriteria.some(c => c.name.trim() !== '');
+
   const handleSave = () => {
+    // Validate company criteria
+    if (!hasValidCriteria) {
+      setCriteriaError(true);
+      return;
+    }
+    setCriteriaError(false);
+
     const startDate = formData.startDate ? new Date(formData.startDate) : new Date();
     const endDate = formData.endDate ? new Date(formData.endDate) : undefined;
 
-    // If endDate is set, result is required
-    if (endDate && !formData.result.trim()) {
-      setResultError(true);
-      return;
-    }
     setResultError(false);
 
     onSave({
@@ -437,12 +437,37 @@ function GoalsEditDialog({ open, onOpenChange, goal, onSave }: GoalsEditDialogPr
       careerPath: formData.careerPath || undefined,
       result: formData.result || undefined,
       searchPeriod: formData.searchPeriod || undefined,
-      companyEvalCriteria: formData.companyEvalCriteria,
+      companyEvalCriteria: formData.companyEvalCriteria.filter(c => c.name.trim() !== ''),
       startDate,
       endDate,
       updatedAt: new Date(),
     });
     onOpenChange(false);
+  };
+
+  const handleArchive = () => {
+    if (!formData.result.trim()) {
+      setResultError(true);
+      return;
+    }
+    setResultError(false);
+
+    const startDate = formData.startDate ? new Date(formData.startDate) : new Date();
+    const endDate = formData.endDate ? new Date(formData.endDate) : new Date();
+
+    const archivedGoal: CareerGoal = {
+      ...goal,
+      reason: formData.reason,
+      careerPath: formData.careerPath || undefined,
+      result: formData.result,
+      searchPeriod: formData.searchPeriod || undefined,
+      companyEvalCriteria: formData.companyEvalCriteria.filter(c => c.name.trim() !== ''),
+      startDate,
+      endDate,
+      updatedAt: new Date(),
+    };
+
+    onArchive?.(archivedGoal);
   };
 
   return (
@@ -465,7 +490,7 @@ function GoalsEditDialog({ open, onOpenChange, goal, onSave }: GoalsEditDialogPr
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">종료일(입력 시 이전 기록으로 이동)</Label>
+                <Label className="text-xs text-muted-foreground">목표 종료일 (선택)</Label>
                 <Input
                   type="date"
                   value={formData.endDate}
@@ -514,36 +539,25 @@ function GoalsEditDialog({ open, onOpenChange, goal, onSave }: GoalsEditDialogPr
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="result" className={cn(resultError && "text-destructive")}>
-              결과 {formData.endDate && <span className="text-destructive">*</span>}
-            </Label>
-            <Textarea
-              id="result"
-              value={formData.result}
-              onChange={(e) => {
-                setFormData({ ...formData, result: e.target.value });
-                if (e.target.value.trim()) setResultError(false);
-              }}
-              rows={2}
-              placeholder="이 목표의 결과를 기록하세요"
-              className={cn(resultError && "border-destructive ring-destructive focus-visible:ring-destructive")}
-            />
-            {resultError && (
-              <p className="text-xs text-destructive">종료일을 입력하려면 결과를 먼저 작성해주세요.</p>
-            )}
-          </div>
 
           {/* Company Eval Criteria */}
           <div className="space-y-3">
-            <Label>회사 평가 기준 (가중치 클릭으로 조절)</Label>
+            <Label className={cn(criteriaError && "text-destructive")}>
+              회사 평가 기준 (가중치 클릭으로 조절) <span className="text-destructive">*</span>
+            </Label>
+            {criteriaError && (
+              <p className="text-xs text-destructive">최소 1개 이상의 회사 평가 기준을 입력해주세요.</p>
+            )}
             {formData.companyEvalCriteria.map((c, i) => (
               <div key={i} className="space-y-2 p-3 bg-secondary/30 rounded-lg">
                 <div className="flex items-center gap-2">
                   <Input
                     value={c.name}
-                    onChange={(e) => updateCriteriaName(i, e.target.value)}
-                    className="flex-1 h-9"
+                    onChange={(e) => {
+                      updateCriteriaName(i, e.target.value);
+                      if (e.target.value.trim()) setCriteriaError(false);
+                    }}
+                    className={cn("flex-1 h-9", criteriaError && i === 0 && !c.name.trim() && "border-destructive")}
                     placeholder="기준 이름"
                   />
                   <div className="flex gap-1">
@@ -571,6 +585,51 @@ function GoalsEditDialog({ open, onOpenChange, goal, onSave }: GoalsEditDialogPr
               </div>
             ))}
           </div>
+
+          {/* Archive Goal Section */}
+          {onArchive && (
+            <div className="border-t border-border pt-4 space-y-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => setShowArchiveResult(!showArchiveResult)}
+              >
+                <History className="w-4 h-4 mr-2" />
+                목표 종료하기
+              </Button>
+              
+              {showArchiveResult && (
+                <div className="space-y-2 p-3 bg-secondary/30 rounded-lg">
+                  <Label htmlFor="archiveResult" className={cn(resultError && "text-destructive")}>
+                    결과 기록 <span className="text-destructive">*</span>
+                  </Label>
+                  <Textarea
+                    id="archiveResult"
+                    value={formData.result}
+                    onChange={(e) => {
+                      setFormData({ ...formData, result: e.target.value });
+                      if (e.target.value.trim()) setResultError(false);
+                    }}
+                    rows={2}
+                    placeholder="이 목표의 결과를 기록하세요 (예: A사 입사 확정)"
+                    className={cn(resultError && "border-destructive")}
+                  />
+                  {resultError && (
+                    <p className="text-xs text-destructive">결과를 입력해주세요.</p>
+                  )}
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="w-full"
+                    onClick={handleArchive}
+                  >
+                    목표 종료 및 기록으로 이동
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex gap-2 pt-2">
             <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
