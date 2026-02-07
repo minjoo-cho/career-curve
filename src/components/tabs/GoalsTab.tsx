@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useData } from '@/contexts/DataContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/layout/PageHeader';
 import {
@@ -74,13 +75,13 @@ function isGoalEnded(goal: CareerGoal | null): boolean {
 }
 
 export function GoalsTab() {
+  const { t } = useLanguage();
   const { currentGoals, addGoal, updateGoal, removeGoal } = useData();
   const [goalHistory, setGoalHistory] = useState<any[]>([]); // Local state for history since not in DB yet
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [pendingNewGoal, setPendingNewGoal] = useState<CareerGoal | null>(null);
-
   // Filter out goals that have endDate (they should be archived)
   const activeGoals = currentGoals.filter((g) => !isGoalEnded(g));
 
@@ -109,8 +110,8 @@ export function GoalsTab() {
   return (
     <div className="flex flex-col h-full">
       <PageHeader
-        title="커리어 목표"
-        subtitle="목표를 정하고 기록하세요"
+        title={t('goals.title')}
+        subtitle={t('goals.subtitle')}
         right={
           <Button
             variant="default"
@@ -118,7 +119,7 @@ export function GoalsTab() {
             onClick={handleAddNewGoal}
           >
             <Target className="w-4 h-4 mr-2" />
-            새 목표
+            {t('goals.newGoal')}
           </Button>
         }
       />
@@ -130,7 +131,7 @@ export function GoalsTab() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Target className="w-5 h-5 text-primary" />
-                <h2 className="font-semibold text-foreground">현재 목표</h2>
+                <h2 className="font-semibold text-foreground">{t('goals.currentGoal')}</h2>
                 {activeGoals.length > 0 && (
                   <Badge variant="secondary" className="text-xs">{activeGoals.length}</Badge>
                 )}

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/layout/PageHeader';
 import {
@@ -46,6 +47,7 @@ import { exportResumeToDocx } from '@/lib/resumeExporter';
 import { exportTailoredResumeToDocx, formatResumeForPreview, ResumeFormat } from '@/lib/tailoredResumeExporter';
 
 export function CareerTab() {
+  const { t } = useLanguage();
   const { experiences, resumes, tailoredResumes, addExperience, updateExperience, removeExperience, addResume, updateResume, removeResume, updateTailoredResume, removeTailoredResume } = useData();
   const { user } = useAuth();
   const userName = user?.user_metadata?.name_ko || user?.user_metadata?.name_en || user?.email || '사용자';
@@ -290,7 +292,7 @@ export function CareerTab() {
 
   return (
     <div className="flex flex-col h-full">
-      <PageHeader title="경력" subtitle="이력서와 경험을 관리하세요" />
+      <PageHeader title={t('career.title')} subtitle={t('career.subtitle')} />
 
       <div className="flex-1 overflow-y-auto px-4 pb-20 space-y-4 scrollbar-hide">
         {/* Resumes Section */}
@@ -299,7 +301,7 @@ export function CareerTab() {
             <CollapsibleTrigger className="w-full flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
                 <File className="w-5 h-5 text-primary" />
-                <h2 className="font-semibold text-foreground">이력서</h2>
+                <h2 className="font-semibold text-foreground">{t('career.resume')}</h2>
                 <Badge variant="secondary" className="text-xs">{resumes.length}</Badge>
               </div>
               {resumesOpen ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
