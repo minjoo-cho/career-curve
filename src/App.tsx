@@ -19,37 +19,35 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 function AppWithProviders() {
-  const { user, isLoading } = useAuth();
+  const { isLoading } = useAuth();
   const { t } = useLanguage();
   // Initialize device fingerprint for logged-in users (abuse detection)
   useDeviceFingerprint();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">{t('common.loading')}</div>
-      </div>
-    );
-  }
 
   return (
     <DataProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <ProtectedRoute>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </ProtectedRoute>
-        </BrowserRouter>
+        {isLoading ? (
+          <div className="min-h-screen flex items-center justify-center bg-background">
+            <div className="animate-pulse text-muted-foreground">{t('common.loading')}</div>
+          </div>
+        ) : (
+          <BrowserRouter>
+            <ProtectedRoute>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/admin" element={<Admin />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </ProtectedRoute>
+          </BrowserRouter>
+        )}
       </TooltipProvider>
     </DataProvider>
   );
