@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, ExternalLink, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useData } from '@/contexts/DataContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -29,6 +30,7 @@ function isLikelyJobUrl(url: string): boolean {
 }
 
 export function ChatTab({ onNavigateToBoard }: ChatTabProps) {
+  const { t } = useLanguage();
   const [inputValue, setInputValue] = useState('');
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
@@ -292,10 +294,10 @@ export function ChatTab({ onNavigateToBoard }: ChatTabProps) {
       <header className="px-4 pb-2 bg-background safe-top-lg shrink-0">
         <div className="flex items-center gap-2">
           <img src={logoImage} alt="Logo" className="w-6 h-6 object-contain" />
-          <h1 className="text-xl font-bold text-foreground">채팅</h1>
+          <h1 className="text-xl font-bold text-foreground">{t('chat.title')}</h1>
         </div>
         <p className="text-sm text-muted-foreground mt-0.5">
-          공고를 넣는 순간, 정리가 시작됩니다
+          {t('chat.subtitle')}
         </p>
       </header>
 
@@ -333,7 +335,7 @@ export function ChatTab({ onNavigateToBoard }: ChatTabProps) {
                   onClick={onNavigateToBoard}
                 >
                   <ExternalLink className="w-4 h-4 mr-1.5" />
-                  보드에서 보기
+                  {t('chat.viewOnBoard')}
                 </Button>
               )}
             </div>
@@ -350,7 +352,7 @@ export function ChatTab({ onNavigateToBoard }: ChatTabProps) {
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder="공고 링크를 붙여넣으세요. 자동으로 공고를 요약해줍니다"
+            placeholder={t('chat.placeholder')}
             className="flex-1 bg-secondary rounded-full px-4 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <Button
@@ -370,15 +372,15 @@ export function ChatTab({ onNavigateToBoard }: ChatTabProps) {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-warning" />
-              공고가 아닌 링크일 수 있습니다
+              {t('chat.notJobUrl.title')}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              이 링크는 채용 공고가 아닌 것으로 보입니다. 계속 공고 등록을 진행하시겠습니까?
+              {t('chat.notJobUrl.desc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelJobUrl}>취소</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmJobUrl}>계속 진행</AlertDialogAction>
+            <AlertDialogCancel onClick={handleCancelJobUrl}>{t('chat.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmJobUrl}>{t('chat.continue')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -389,15 +391,15 @@ export function ChatTab({ onNavigateToBoard }: ChatTabProps) {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-warning" />
-              이전에 공유한 적 있는 링크입니다
+              {t('chat.duplicate.title')}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              이 링크는 이미 보드에 추가된 공고입니다. 다시 추가하시겠습니까?
+              {t('chat.duplicate.desc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleDuplicateCancel}>취소</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDuplicateConfirm}>추가</AlertDialogAction>
+            <AlertDialogCancel onClick={handleDuplicateCancel}>{t('chat.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDuplicateConfirm}>{t('chat.add')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -408,15 +410,15 @@ export function ChatTab({ onNavigateToBoard }: ChatTabProps) {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-warning" />
-              공고 내용을 가져올 수 없습니다
+              {t('chat.noContent.title')}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              해당 페이지가 마감되었거나 접근할 수 없는 상태입니다. 그래도 공고를 추가하고 직접 정보를 입력하시겠습니까?
+              {t('chat.noContent.desc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleNoContentCancel}>취소</AlertDialogCancel>
-            <AlertDialogAction onClick={handleNoContentConfirm}>직접 입력하기</AlertDialogAction>
+            <AlertDialogCancel onClick={handleNoContentCancel}>{t('chat.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleNoContentConfirm}>{t('chat.manualEntry')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -427,7 +429,7 @@ export function ChatTab({ onNavigateToBoard }: ChatTabProps) {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-destructive" />
-              공고 추가 한도 초과
+              {t('chat.limit.title')}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {subscription?.planName === 'free' 
@@ -440,7 +442,7 @@ export function ChatTab({ onNavigateToBoard }: ChatTabProps) {
               setLimitDialogOpen(false);
               setPendingUrl(null);
             }}>
-              닫기
+              {t('chat.close')}
             </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useCustomStatuses } from '@/hooks/useCustomStatuses';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { JobCard } from '@/components/board/JobCard';
 import { JobDetailDialog } from '@/components/board/JobDetailDialog';
 import { TableView } from '@/components/board/TableView';
@@ -75,13 +76,14 @@ const loadSavedFilters = (): FilterState => {
 };
 
 export function BoardTab() {
+  const { t, language } = useLanguage();
   const [viewMode, setViewMode] = useState<ViewMode>('kanban');
   const [sortOption, setSortOption] = useState<SortOption>('priority');
   const [filters, setFiltersState] = useState<FilterState>(loadSavedFilters);
   const { jobPostings, currentGoals, updateJobPosting } = useData();
   const { customStatuses } = useCustomStatuses();
   const { user } = useAuth();
-  const userName = user?.user_metadata?.name_ko || user?.user_metadata?.name_en || user?.email || '사용자';
+  const userName = user?.user_metadata?.name_ko || user?.user_metadata?.name_en || user?.email || (language === 'en' ? 'User' : '사용자');
   const currentGoal = currentGoals[0] ?? null;
 
   // Persist filters to localStorage
@@ -181,8 +183,8 @@ export function BoardTab() {
       <header className="px-4 pb-4 bg-background safe-top-lg">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <img src={logoImage} alt="커브 로고" className="w-6 h-6 object-contain" loading="eager" />
-            <h1 className="text-xl font-bold text-foreground">공고 관리 보드</h1>
+            <img src={logoImage} alt={language === 'en' ? 'Curve Logo' : '커브 로고'} className="w-6 h-6 object-contain" loading="eager" />
+            <h1 className="text-xl font-bold text-foreground">{t('board.title')}</h1>
           </div>
           
           <div className="flex items-center gap-2">
@@ -312,15 +314,27 @@ export function BoardTab() {
         {/* Hero Summary */}
         <div className="bg-gradient-to-br from-primary/10 to-accent rounded-2xl p-4 border border-primary/10">
           <p className="text-sm text-foreground leading-relaxed">
-            <span className="font-semibold">{userName}</span>님, 이직 목표 수립 후
-            <br />
-            총 <span className="font-bold text-primary">{totalCount}곳</span>을 검토했고
-            <br />
-            <span className="font-bold text-primary">{interviewCount}곳</span>과 인터뷰를 진행 중이에요
+            {language === 'en' ? (
+              <>
+                <span className="font-semibold">{userName}</span>, since setting your job search goal
+                <br />
+                you've reviewed <span className="font-bold text-primary">{totalCount}</span> postings
+                <br />
+                and are interviewing with <span className="font-bold text-primary">{interviewCount}</span>
+              </>
+            ) : (
+              <>
+                <span className="font-semibold">{userName}</span>님, 이직 목표 수립 후
+                <br />
+                총 <span className="font-bold text-primary">{totalCount}곳</span>을 검토했고
+                <br />
+                <span className="font-bold text-primary">{interviewCount}곳</span>과 인터뷰를 진행 중이에요
+              </>
+            )}
           </p>
           {daysSinceGoal > 0 && (
             <p className="text-xs text-muted-foreground mt-2">
-              {daysSinceGoal}일째 이직 여정
+              {language === 'en' ? `Day ${daysSinceGoal} of your job search journey` : `${daysSinceGoal}일째 이직 여정`}
             </p>
           )}
         </div>
