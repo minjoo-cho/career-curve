@@ -1,8 +1,10 @@
 import { useState, useMemo, useRef } from 'react';
-import { LayoutGrid, Table2, Filter, ArrowUpDown, ChevronDown, ChevronRight, ChevronLeft } from 'lucide-react';
+import { LayoutGrid, Table2, Filter, ArrowUpDown, ChevronDown, ChevronRight, ChevronLeft, Plus, ListChecks } from 'lucide-react';
 import logoImage from '@/assets/logo.png';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useCustomStatuses } from '@/hooks/useCustomStatuses';
@@ -13,6 +15,13 @@ import { TableView } from '@/components/board/TableView';
 import { JobPosting, BuiltInJobStatus, getStatusLabel, getStatusColor } from '@/types/job';
 import { JobStatus, STATUS_LABELS } from '@/types/job';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +30,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { CustomStatusManager } from '@/components/settings/CustomStatusManager';
 
 type ViewMode = 'kanban' | 'table';
 type SortOption = 'newest' | 'oldest' | 'priority' | 'company';
@@ -55,13 +70,6 @@ const STATUS_SELECT_ORDER: BuiltInJobStatus[] = [
   'closed',
 ];
 
-const SORT_LABELS: Record<SortOption, string> = {
-  newest: '최신순',
-  oldest: '오래된순',
-  priority: '추천순',
-  company: '회사명순 (한글→영문)',
-};
-
 // Load filters from localStorage
 const loadSavedFilters = (): FilterState => {
   try {
@@ -80,7 +88,9 @@ export function BoardTab() {
   const [viewMode, setViewMode] = useState<ViewMode>('kanban');
   const [sortOption, setSortOption] = useState<SortOption>('priority');
   const [filters, setFiltersState] = useState<FilterState>(loadSavedFilters);
-  const { jobPostings, currentGoals, updateJobPosting } = useData();
+  const [isManualAddOpen, setIsManualAddOpen] = useState(false);
+  const [isStatusManagerOpen, setIsStatusManagerOpen] = useState(false);
+  const { jobPostings, currentGoals, updateJobPosting, addJobPosting } = useData();
   const { customStatuses } = useCustomStatuses();
   const { user } = useAuth();
   const userName = user?.user_metadata?.name_ko || user?.user_metadata?.name_en || user?.email || (language === 'en' ? 'User' : '사용자');
@@ -114,6 +124,14 @@ export function BoardTab() {
     if (aIsKorean && !bIsKorean) return -1;
     if (!aIsKorean && bIsKorean) return 1;
     return a.localeCompare(b, 'ko');
+  };
+
+  // Sort labels based on language
+  const SORT_LABELS: Record<SortOption, string> = {
+    newest: t('board.sortNewest'),
+    oldest: t('board.sortOldest'),
+    priority: t('board.sortPriority'),
+    company: t('board.sortCompany'),
   };
 
   // Sort and filter jobs
@@ -177,6 +195,23 @@ export function BoardTab() {
     updateJobPosting(jobId, { status: newStatus });
   };
 
+  const handleManualAdd = (companyName: string, jobTitle: string) => {
+    const now = new Date();
+    const newJob: JobPosting = {
+      id: Date.now().toString(),
+      companyName: companyName.trim(),
+      title: jobTitle.trim(),
+      position: jobTitle.trim(),
+      status: 'reviewing',
+      priority: 3,
+      createdAt: now,
+      updatedAt: now,
+    };
+    addJobPosting(newJob);
+    toast.success(language === 'en' ? 'Job added to board' : '보드에 추가되었습니다');
+    setIsManualAddOpen(false);
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -188,23 +223,50 @@ export function BoardTab() {
           </div>
           
           <div className="flex items-center gap-2">
+            {/* Manual Add Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => setIsManualAddOpen(true)}
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              <span className="text-xs">{t('board.addManual')}</span>
+            </Button>
+
+            {/* Custom Status Manager */}
+            <Popover open={isStatusManagerOpen} onOpenChange={setIsStatusManagerOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-7 px-2">
+                  <ListChecks className="w-3.5 h-3.5 mr-1" />
+                  <span className="text-xs">{t('board.addStatus')}</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80" align="end">
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">{t('settings.customStatus')}</h4>
+                  <CustomStatusManager />
+                </div>
+              </PopoverContent>
+            </Popover>
+
             {/* Filter - 경력/근무형태/위치 기준 */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-7 px-2">
                   <Filter className="w-3.5 h-3.5 mr-1" />
-                  <span className="text-xs">필터</span>
+                  <span className="text-xs">{t('board.filter')}</span>
                   {(filters.minExperience || filters.workType || filters.location) && (
-                    <Badge variant="secondary" className="ml-1 text-[10px]">적용중</Badge>
+                    <Badge variant="secondary" className="ml-1 text-[10px]">{t('board.filterApplied')}</Badge>
                   )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>필터 (공고 정보 기준)</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('board.filterLabel')}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 
                 <div className="px-2 py-1.5">
-                  <p className="text-xs font-medium mb-1">최소 경력</p>
+                  <p className="text-xs font-medium mb-1">{t('board.minExperience')}</p>
                   {filterOptions.experiences.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {filterOptions.experiences.map(exp => (
@@ -218,11 +280,11 @@ export function BoardTab() {
                         </Badge>
                       ))}
                     </div>
-                  ) : <p className="text-xs text-muted-foreground">데이터 없음</p>}
+                  ) : <p className="text-xs text-muted-foreground">{t('board.noData')}</p>}
                 </div>
 
                 <div className="px-2 py-1.5">
-                  <p className="text-xs font-medium mb-1">근무 형태</p>
+                  <p className="text-xs font-medium mb-1">{t('board.workType')}</p>
                   {filterOptions.workTypes.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {filterOptions.workTypes.map(wt => (
@@ -236,11 +298,11 @@ export function BoardTab() {
                         </Badge>
                       ))}
                     </div>
-                  ) : <p className="text-xs text-muted-foreground">데이터 없음</p>}
+                  ) : <p className="text-xs text-muted-foreground">{t('board.noData')}</p>}
                 </div>
 
                 <div className="px-2 py-1.5">
-                  <p className="text-xs font-medium mb-1">위치</p>
+                  <p className="text-xs font-medium mb-1">{t('board.location')}</p>
                   {filterOptions.locations.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {filterOptions.locations.map(loc => (
@@ -254,12 +316,12 @@ export function BoardTab() {
                         </Badge>
                       ))}
                     </div>
-                  ) : <p className="text-xs text-muted-foreground">데이터 없음</p>}
+                  ) : <p className="text-xs text-muted-foreground">{t('board.noData')}</p>}
                 </div>
 
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setFilters({ minExperience: '', workType: '', location: '' })}>
-                  필터 초기화
+                  {t('board.resetFilter')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -273,7 +335,7 @@ export function BoardTab() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>정렬</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('board.sort')}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {Object.entries(SORT_LABELS).map(([key, label]) => (
                   <DropdownMenuItem key={key} onClick={() => setSortOption(key as SortOption)}>
@@ -348,7 +410,72 @@ export function BoardTab() {
           <TableView jobs={sortedJobs} />
         )}
       </div>
+
+      {/* Manual Add Dialog */}
+      <ManualAddDialog
+        open={isManualAddOpen}
+        onOpenChange={setIsManualAddOpen}
+        onAdd={handleManualAdd}
+      />
     </div>
+  );
+}
+
+interface ManualAddDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAdd: (companyName: string, jobTitle: string) => void;
+}
+
+function ManualAddDialog({ open, onOpenChange, onAdd }: ManualAddDialogProps) {
+  const { t } = useLanguage();
+  const [companyName, setCompanyName] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
+
+  const handleSubmit = () => {
+    if (!companyName.trim() || !jobTitle.trim()) {
+      toast.error(t('board.companyName') + ', ' + t('board.jobTitle') + ' required');
+      return;
+    }
+    onAdd(companyName, jobTitle);
+    setCompanyName('');
+    setJobTitle('');
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[90%] rounded-2xl">
+        <DialogHeader>
+          <DialogTitle>{t('board.manualEntry')}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <div className="space-y-2">
+            <Label>{t('board.companyName')}</Label>
+            <Input
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              placeholder="Google, Apple, etc."
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>{t('board.jobTitle')}</Label>
+            <Input
+              value={jobTitle}
+              onChange={(e) => setJobTitle(e.target.value)}
+              placeholder="Software Engineer, PM, etc."
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button className="flex-1" onClick={handleSubmit}>
+              {t('board.addToBoard')}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -370,6 +497,7 @@ function KanbanView({
   allJobs: JobPosting[];
   customStatuses: CustomStatusItem[];
 }) {
+  const { t, language } = useLanguage();
   const [showClosed, setShowClosed] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [draggedJobId, setDraggedJobId] = useState<string | null>(null);
@@ -432,6 +560,19 @@ function KanbanView({
   const scrollRight = () => {
     scrollContainerRef.current?.scrollBy({ left: 288, behavior: 'smooth' });
   };
+
+  // Get localized status label
+  const getLocalizedStatusLabel = (status: JobStatus) => {
+    if (status.startsWith('custom:')) {
+      const customId = status.replace('custom:', '');
+      const found = customStatuses.find(s => s.id === customId);
+      return found?.name || (language === 'en' ? 'Custom' : '사용자 정의');
+    }
+    // Use translation key
+    const translationKey = `status.${status}`;
+    return t(translationKey);
+  };
+
   return (
     <>
       <div className="relative h-full">
@@ -440,7 +581,7 @@ function KanbanView({
           <button
             onClick={scrollLeft}
             className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-background/90 backdrop-blur-sm border border-border rounded-full p-2 shadow-lg hover:bg-secondary transition-colors"
-            aria-label="왼쪽으로 스크롤"
+            aria-label={language === 'en' ? 'Scroll left' : '왼쪽으로 스크롤'}
           >
             <ChevronLeft className="w-5 h-5 text-foreground" />
           </button>
@@ -451,7 +592,7 @@ function KanbanView({
           <button
             onClick={scrollRight}
             className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-background/90 backdrop-blur-sm border border-border rounded-full p-2 shadow-lg hover:bg-secondary transition-colors"
-            aria-label="오른쪽으로 스크롤"
+            aria-label={language === 'en' ? 'Scroll right' : '오른쪽으로 스크롤'}
           >
             <ChevronRight className="w-5 h-5 text-foreground" />
           </button>
@@ -488,7 +629,7 @@ function KanbanView({
                     status.startsWith('custom:') && 'bg-accent',
                   )} />
                   <span className="text-sm font-semibold text-foreground">
-                    {getStatusLabel(status, customStatuses)}
+                    {getLocalizedStatusLabel(status)}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {groupedByStatus[status]?.length || 0}
@@ -519,7 +660,7 @@ function KanbanView({
                       "text-center py-8 text-sm text-muted-foreground rounded-lg border-2 border-dashed",
                       dragOverColumn === status ? "border-primary" : "border-transparent"
                     )}>
-                      {dragOverColumn === status ? "여기에 놓기" : "아직 없음"}
+                      {dragOverColumn === status ? t('board.dropHere') : t('board.noneYet')}
                     </div>
                   )}
                 </div>
@@ -535,7 +676,7 @@ function KanbanView({
                 className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
                 {showClosed ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                <span>공고 마감</span>
+                <span>{t('board.closed')}</span>
                 <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
                   {groupedByStatus['closed']?.length || 0}
                 </span>
