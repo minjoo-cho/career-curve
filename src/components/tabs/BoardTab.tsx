@@ -5,10 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useCustomStatuses } from '@/hooks/useCustomStatuses';
 import { JobCard } from '@/components/board/JobCard';
 import { JobDetailDialog } from '@/components/board/JobDetailDialog';
 import { TableView } from '@/components/board/TableView';
-import { JobPosting } from '@/types/job';
+import { JobPosting, BuiltInJobStatus, getStatusLabel, getStatusColor } from '@/types/job';
 import { JobStatus, STATUS_LABELS } from '@/types/job';
 import { cn } from '@/lib/utils';
 import {
@@ -30,7 +31,7 @@ interface FilterState {
   location: string;
 }
 
-const STATUS_ORDER: JobStatus[] = [
+const BUILTIN_STATUS_ORDER: BuiltInJobStatus[] = [
   'reviewing',
   'applied',
   'interview',
@@ -42,7 +43,7 @@ const STATUS_ORDER: JobStatus[] = [
 ];
 
 // Display order for select dropdown (different from kanban order)
-const STATUS_SELECT_ORDER: JobStatus[] = [
+const STATUS_SELECT_ORDER: BuiltInJobStatus[] = [
   'reviewing',
   'applied',
   'interview',
@@ -78,6 +79,7 @@ export function BoardTab() {
   const [sortOption, setSortOption] = useState<SortOption>('priority');
   const [filters, setFiltersState] = useState<FilterState>(loadSavedFilters);
   const { jobPostings, currentGoals, updateJobPosting } = useData();
+  const { customStatuses } = useCustomStatuses();
   const { user } = useAuth();
   const userName = user?.user_metadata?.name_ko || user?.user_metadata?.name_en || user?.email || '사용자';
   const currentGoal = currentGoals[0] ?? null;
@@ -154,13 +156,20 @@ export function BoardTab() {
     ? Math.floor((Date.now() - goalStart.getTime()) / (1000 * 60 * 60 * 24))
     : 0;
 
-  // Group sorted jobs by status for kanban
+  // Group sorted jobs by status for kanban (built-in + custom)
   const groupedByStatus = useMemo(() => {
-    return STATUS_ORDER.reduce((acc, status) => {
-      acc[status] = sortedJobs.filter((j) => j.status === status);
-      return acc;
-    }, {} as Record<JobStatus, typeof sortedJobs>);
-  }, [sortedJobs]);
+    // Start with built-in statuses
+    const groups: Record<string, typeof sortedJobs> = {};
+    BUILTIN_STATUS_ORDER.forEach((status) => {
+      groups[status] = sortedJobs.filter((j) => j.status === status);
+    });
+    // Add custom statuses
+    customStatuses.forEach((cs) => {
+      const customKey = `custom:${cs.id}`;
+      groups[customKey] = sortedJobs.filter((j) => j.status === customKey);
+    });
+    return groups;
+  }, [sortedJobs, customStatuses]);
 
   const handleDropOnColumn = (jobId: string, newStatus: JobStatus) => {
     updateJobPosting(jobId, { status: newStatus });
@@ -320,7 +329,7 @@ export function BoardTab() {
       {/* Content */}
       <div className="flex-1 overflow-hidden pb-20">
         {viewMode === 'kanban' ? (
-          <KanbanView groupedByStatus={groupedByStatus} onDropOnColumn={handleDropOnColumn} allJobs={jobPostings} />
+          <KanbanView groupedByStatus={groupedByStatus} onDropOnColumn={handleDropOnColumn} allJobs={jobPostings} customStatuses={customStatuses} />
         ) : (
           <TableView jobs={sortedJobs} />
         )}
@@ -329,14 +338,23 @@ export function BoardTab() {
   );
 }
 
+interface CustomStatusItem {
+  id: string;
+  name: string;
+  color: string;
+  sortOrder: number;
+}
+
 function KanbanView({ 
   groupedByStatus,
   onDropOnColumn,
   allJobs,
+  customStatuses,
 }: { 
-  groupedByStatus: Record<JobStatus, JobPosting[]>;
+  groupedByStatus: Record<string, JobPosting[]>;
   onDropOnColumn: (jobId: string, newStatus: JobStatus) => void;
   allJobs: JobPosting[];
+  customStatuses: CustomStatusItem[];
 }) {
   const [showClosed, setShowClosed] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -347,6 +365,12 @@ function KanbanView({
   const [canScrollRight, setCanScrollRight] = useState(true);
 
   const selectedJob = selectedJobId ? allJobs.find((j) => j.id === selectedJobId) ?? null : null;
+
+  // Statuses to show in main view (excluding closed and rejected)
+  const mainStatuses: JobStatus[] = [
+    ...BUILTIN_STATUS_ORDER.filter((status) => !status.startsWith('rejected') && status !== 'closed'),
+    ...customStatuses.map((cs) => `custom:${cs.id}` as JobStatus),
+  ];
 
   const handleDragStart = (e: React.DragEvent, jobId: string) => {
     setDraggedJobId(jobId);
@@ -394,10 +418,6 @@ function KanbanView({
   const scrollRight = () => {
     scrollContainerRef.current?.scrollBy({ left: 288, behavior: 'smooth' });
   };
-
-  // Statuses to show in main view (excluding closed and rejected)
-  const mainStatuses = STATUS_ORDER.filter((status) => !status.startsWith('rejected') && status !== 'closed');
-
   return (
     <>
       <div className="relative h-full">
@@ -451,9 +471,10 @@ function KanbanView({
                     status === 'interview' && 'bg-primary',
                     status === 'offer' && 'bg-success',
                     status === 'accepted' && 'bg-success',
+                    status.startsWith('custom:') && 'bg-accent',
                   )} />
                   <span className="text-sm font-semibold text-foreground">
-                    {STATUS_LABELS[status]}
+                    {getStatusLabel(status, customStatuses)}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {groupedByStatus[status]?.length || 0}

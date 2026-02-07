@@ -1,5 +1,5 @@
-// Job posting status flow
-export type JobStatus = 
+// Job posting status flow - built-in statuses
+export type BuiltInJobStatus = 
   | 'reviewing'      // 지원검토
   | 'applied'        // 서류지원
   | 'interview'      // 인터뷰
@@ -8,6 +8,9 @@ export type JobStatus =
   | 'offer'          // 오퍼
   | 'accepted'       // 합격-최종
   | 'closed';        // 공고 마감
+
+// JobStatus can be built-in or custom (custom statuses are stored as 'custom:statusId')
+export type JobStatus = BuiltInJobStatus | `custom:${string}`;
 
 // AI-extracted key competency for job posting (recruiter perspective)
 export interface KeyCompetency {
@@ -142,8 +145,8 @@ export interface ChatMessage {
   createdAt: Date;
 }
 
-// Status labels in Korean
-export const STATUS_LABELS: Record<JobStatus, string> = {
+// Status labels in Korean (for built-in statuses)
+export const STATUS_LABELS: Record<BuiltInJobStatus, string> = {
   'reviewing': '지원검토',
   'applied': '서류지원',
   'interview': '인터뷰',
@@ -154,8 +157,18 @@ export const STATUS_LABELS: Record<JobStatus, string> = {
   'closed': '공고 마감',
 };
 
-// Status colors
-export const STATUS_COLORS: Record<JobStatus, string> = {
+// Helper function to get status label (handles custom statuses)
+export function getStatusLabel(status: JobStatus, customStatuses?: { id: string; name: string }[]): string {
+  if (status.startsWith('custom:')) {
+    const customId = status.replace('custom:', '');
+    const found = customStatuses?.find(s => s.id === customId);
+    return found?.name || '사용자 정의';
+  }
+  return STATUS_LABELS[status as BuiltInJobStatus] || status;
+}
+
+// Status colors (for built-in statuses)
+export const STATUS_COLORS: Record<BuiltInJobStatus, string> = {
   'reviewing': 'bg-muted text-muted-foreground',
   'applied': 'bg-info/10 text-info',
   'interview': 'bg-primary/10 text-primary',
@@ -165,6 +178,26 @@ export const STATUS_COLORS: Record<JobStatus, string> = {
   'accepted': 'bg-success/10 text-success',
   'closed': 'bg-muted text-muted-foreground',
 };
+
+// Color mapping for custom status colors
+const CUSTOM_COLOR_MAP: Record<string, string> = {
+  'muted': 'bg-muted text-muted-foreground',
+  'primary': 'bg-primary/10 text-primary',
+  'success': 'bg-success/10 text-success',
+  'warning': 'bg-warning/10 text-warning',
+  'destructive': 'bg-destructive/10 text-destructive',
+  'info': 'bg-info/10 text-info',
+};
+
+// Helper function to get status color (handles custom statuses)
+export function getStatusColor(status: JobStatus, customStatuses?: { id: string; color: string }[]): string {
+  if (status.startsWith('custom:')) {
+    const customId = status.replace('custom:', '');
+    const found = customStatuses?.find(s => s.id === customId);
+    return CUSTOM_COLOR_MAP[found?.color || 'muted'] || 'bg-muted text-muted-foreground';
+  }
+  return STATUS_COLORS[status as BuiltInJobStatus] || 'bg-muted text-muted-foreground';
+}
 
 // Priority labels (0 = not evaluated yet)
 export const PRIORITY_LABELS: Record<number, string> = {

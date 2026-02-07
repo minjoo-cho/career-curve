@@ -113,6 +113,10 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language': '언어',
     'settings.languageKo': '한국어',
     'settings.languageEn': 'English',
+    'settings.customStatus': '사용자 정의 상태',
+    'settings.customStatusDescription': '보드에서 사용할 커스텀 상태를 추가하세요. 기본 상태 외에 자유롭게 추가할 수 있습니다.',
+    'settings.newStatusPlaceholder': '새 상태 이름',
+    'settings.noCustomStatuses': '추가된 사용자 정의 상태가 없습니다',
     'settings.version': '커브',
     
     // Status labels
@@ -236,6 +240,10 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language': 'Language',
     'settings.languageKo': '한국어',
     'settings.languageEn': 'English',
+    'settings.customStatus': 'Custom Statuses',
+    'settings.customStatusDescription': 'Add custom statuses for your board. You can add any statuses beyond the defaults.',
+    'settings.newStatusPlaceholder': 'New status name',
+    'settings.noCustomStatuses': 'No custom statuses added',
     'settings.version': 'Curve',
     
     // Status labels
