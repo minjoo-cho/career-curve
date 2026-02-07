@@ -1,20 +1,21 @@
 import { MessageSquare, LayoutGrid, Briefcase, Target, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export type TabId = 'chat' | 'board' | 'career' | 'goals' | 'settings';
 
 interface TabItem {
   id: TabId;
-  label: string;
+  labelKey: string;
   icon: typeof MessageSquare;
 }
 
 const tabs: TabItem[] = [
-  { id: 'chat', label: '채팅', icon: MessageSquare },
-  { id: 'board', label: '보드', icon: LayoutGrid },
-  { id: 'career', label: '경력', icon: Briefcase },
-  { id: 'goals', label: '목표', icon: Target },
-  { id: 'settings', label: '설정', icon: Settings },
+  { id: 'chat', labelKey: 'nav.chat', icon: MessageSquare },
+  { id: 'board', labelKey: 'nav.board', icon: LayoutGrid },
+  { id: 'career', labelKey: 'nav.career', icon: Briefcase },
+  { id: 'goals', labelKey: 'nav.goals', icon: Target },
+  { id: 'settings', labelKey: 'nav.settings', icon: Settings },
 ];
 
 interface BottomTabBarProps {
@@ -23,6 +24,8 @@ interface BottomTabBarProps {
 }
 
 export function BottomTabBar({ activeTab, onTabChange }: BottomTabBarProps) {
+  const { t } = useLanguage();
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-border safe-bottom">
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
@@ -52,7 +55,7 @@ export function BottomTabBar({ activeTab, onTabChange }: BottomTabBarProps) {
                 'text-[10px] font-medium',
                 isActive && 'font-semibold'
               )}>
-                {tab.label}
+                {t(tab.labelKey)}
               </span>
             </button>
           );

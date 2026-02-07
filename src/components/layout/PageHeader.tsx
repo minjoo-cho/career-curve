@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import logoImage from '@/assets/logo.png';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 type LogoSize = 'none' | 'sm' | 'lg';
 
@@ -19,6 +20,9 @@ export function PageHeader({
   className?: string;
   titleClassName?: string;
 }) {
+  const { language } = useLanguage();
+  const logoAlt = language === 'en' ? 'Curve Logo' : '커브 로고';
+
   const logoClassName =
     logoSize === 'lg'
       ? 'w-11 h-11'
@@ -33,7 +37,7 @@ export function PageHeader({
           {logoSize !== 'none' && (
             <img
               src={logoImage}
-              alt="커브 로고"
+              alt={logoAlt}
               className={cn(logoClassName, 'object-contain shrink-0')}
               loading="eager"
             />
