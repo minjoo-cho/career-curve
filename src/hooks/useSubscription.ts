@@ -121,83 +121,30 @@ export function useSubscription() {
     fetchSubscription();
   }, [fetchSubscription]);
 
-  // Check if user can add more jobs
+  // Check if user can add more jobs - always allow (no limits)
   const canAddJob = useCallback((currentJobCount: number) => {
-    if (!subscription) return false;
-    return currentJobCount < subscription.jobLimit;
-  }, [subscription]);
+    return true; // No job limit
+  }, []);
 
-  // Check if user has AI credits (for analyze-job, evaluate-fit)
+  // Check if user has AI credits - always allow (no limits)
   const hasAiCredits = useCallback(() => {
-    if (!subscription) return false;
-    return subscription.aiCreditsRemaining > 0;
-  }, [subscription]);
+    return true; // No AI credit limit
+  }, []);
 
-  // Check if user has resume generation credits
+  // Check if user has resume generation credits - always allow (no limits)
   const hasResumeCredits = useCallback(() => {
-    if (!subscription) return false;
-    return subscription.resumeCreditsRemaining > 0;
-  }, [subscription]);
+    return true; // No resume credit limit
+  }, []);
 
-  // Use AI credit (for analyze-job, evaluate-fit)
+  // Use AI credit - always succeed (no limits)
   const useAiCredit = useCallback(async (amount: number = 1) => {
-    if (!user || !subscription) return false;
-    
-    if (subscription.aiCreditsRemaining < amount) {
-      return false;
-    }
+    return true; // Always succeed, no credit tracking
+  }, []);
 
-    const { error } = await supabase
-      .from('user_subscriptions')
-      .update({
-        ai_credits_remaining: subscription.aiCreditsRemaining - amount,
-        ai_credits_used: subscription.aiCreditsUsed + amount,
-      })
-      .eq('user_id', user.id);
-
-    if (error) {
-      console.error('Error using AI credit:', error);
-      return false;
-    }
-
-    setSubscription(prev => prev ? {
-      ...prev,
-      aiCreditsRemaining: prev.aiCreditsRemaining - amount,
-      aiCreditsUsed: prev.aiCreditsUsed + amount,
-    } : null);
-
-    return true;
-  }, [user, subscription]);
-
-  // Use resume credit (for generate-resume)
+  // Use resume credit - always succeed (no limits)
   const useResumeCredit = useCallback(async (amount: number = 1) => {
-    if (!user || !subscription) return false;
-    
-    if (subscription.resumeCreditsRemaining < amount) {
-      return false;
-    }
-
-    const { error } = await supabase
-      .from('user_subscriptions')
-      .update({
-        resume_credits_remaining: subscription.resumeCreditsRemaining - amount,
-        resume_credits_used: subscription.resumeCreditsUsed + amount,
-      })
-      .eq('user_id', user.id);
-
-    if (error) {
-      console.error('Error using resume credit:', error);
-      return false;
-    }
-
-    setSubscription(prev => prev ? {
-      ...prev,
-      resumeCreditsRemaining: prev.resumeCreditsRemaining - amount,
-      resumeCreditsUsed: prev.resumeCreditsUsed + amount,
-    } : null);
-
-    return true;
-  }, [user, subscription]);
+    return true; // Always succeed, no credit tracking
+  }, []);
 
   return {
     isLoading,
