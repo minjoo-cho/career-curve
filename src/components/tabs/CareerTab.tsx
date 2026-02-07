@@ -1112,8 +1112,8 @@ function TailoredResumePreviewDialog({
 
       {/* Separate AI Feedback Dialog with enhanced formatting */}
       <Dialog open={showFeedback} onOpenChange={setShowFeedback}>
-        <DialogContent className="max-w-[92%] max-h-[80vh] rounded-2xl">
-          <DialogHeader>
+        <DialogContent className="max-w-[92%] max-h-[80vh] rounded-2xl flex flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5 text-primary" />
               채용담당자 관점 AI 피드백
@@ -1123,17 +1123,19 @@ function TailoredResumePreviewDialog({
             </DialogDescription>
           </DialogHeader>
           
-           <div className="space-y-3">
-             <div className="rounded-lg border border-border bg-warning/10 text-warning p-3 text-xs leading-relaxed">
-               이 과정에서 왜곡, 과장되는 내용이 있을 수 있으니, 스크리닝은 필수입니다!
-             </div>
+          <div className="flex-1 overflow-y-auto min-h-0 space-y-3 pr-1">
+            <div className="rounded-lg border border-border bg-warning/10 text-warning p-3 text-xs leading-relaxed">
+              이 과정에서 왜곡, 과장되는 내용이 있을 수 있으니, 스크리닝은 필수입니다!
+            </div>
 
-             <FeedbackSplitView content={resume.aiFeedback || ''} />
+            <FeedbackSplitView content={resume.aiFeedback || ''} />
+          </div>
 
-             <Button variant="outline" className="w-full" onClick={() => setShowFeedback(false)}>
-               이력서로 돌아가기
-             </Button>
-           </div>
+          <div className="shrink-0 pt-3">
+            <Button variant="outline" className="w-full" onClick={() => setShowFeedback(false)}>
+              이력서로 돌아가기
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </>
@@ -1373,40 +1375,40 @@ function RevisionCards({ content, language }: { content: string; language: 'ko' 
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {cards.map((card, idx) => (
         <div key={idx} className="bg-background/60 rounded-lg border border-border overflow-hidden">
           <div className="bg-primary/10 px-3 py-2 border-b border-border">
-            <span className="font-semibold text-primary text-sm">{card.title}</span>
+            <span className="font-semibold text-primary text-sm truncate block">{card.title}</span>
           </div>
-          <div className="p-3 space-y-2">
+          <div className="p-3 space-y-2 overflow-hidden">
             {card.original && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-start min-w-0">
                 <span className="shrink-0 text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                   {language === 'en' ? 'Before' : '원문'}
                 </span>
-                <span className="text-sm text-muted-foreground line-through decoration-destructive/50">
+                <span className="text-sm text-muted-foreground line-through decoration-destructive/50 break-words min-w-0 [overflow-wrap:anywhere]">
                   {card.original}
                 </span>
               </div>
             )}
             {card.revised && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-start min-w-0">
                 <span className="shrink-0 text-xs font-medium text-primary-foreground bg-primary px-1.5 py-0.5 rounded">
                   {language === 'en' ? 'After' : '수정'}
                 </span>
-                <span className="text-sm text-foreground font-medium">
+                <span className="text-sm text-foreground font-medium break-words min-w-0 [overflow-wrap:anywhere]">
                   {card.revised}
                 </span>
               </div>
             )}
             {card.reason && (
               <div className="mt-2 pt-2 border-t border-border/50">
-                <div className="flex gap-2 items-start">
+                <div className="flex gap-2 items-start min-w-0">
                   <span className="shrink-0 text-xs font-medium text-accent-foreground bg-accent px-1.5 py-0.5 rounded">
                     {language === 'en' ? 'Why' : '근거'}
                   </span>
-                  <span className="text-sm text-muted-foreground italic">
+                  <span className="text-sm text-muted-foreground italic break-words min-w-0 [overflow-wrap:anywhere]">
                     {card.reason}
                   </span>
                 </div>
